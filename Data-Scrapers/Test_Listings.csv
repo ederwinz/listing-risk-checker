@@ -1,0 +1,29 @@
+testing_id,platform,seller_name,listing_title,claimed_brand,claimed_productline,claimed_modelname,claimed_size,claimed_colorway,claimed_status,main_colors,expected_matchid,notes,risk_level,expected_matchconfidence,mismatch_reasons,seller_claims,listing_description
+XHS-001,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Sunny Daze,Ongoing,,,,,,,,
+XHS-002,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Neo Sage,Ongoing,,,,,,,,
+XHS-003,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Down to Earth,Ongoing,,,,,,,,
+XHS-004,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Winter,special,,,,,,,,
+XHS-005,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Rose Quartz,Ongoing,,,,,,,,
+XHS-006,Rednote,OWALA 旗舰店,,Owala,Freesip,Freesip304双饮保温杯吸管不锈钢水杯,945 ml,Candy Coated,Ongoing,,,,,,,,
+XHS-007,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-008,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-009,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-010,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-011,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-012,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-013,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-014,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-015,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-016,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-017,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-018,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-019,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,
+XHS-020,Rednote,OWALA 旗舰店,,Owala,Freesip,,,,,,,,,,,,XHS-021,Taobao,OWALA,【官旗】Freesip304双饮保温杯吸管不锈钢水杯945ml,OWALA,Freesip,Freesip304,945ml,,unknown,"pink, cream, sage green, navy blue",,,,,,official store (官旗),Freesip304双饮保温杯吸管不锈钢水杯945ml。Flash sale ¥52.35 off。Ships within 24 hours。Return shipping subsidy available。
+XHS-021,Taobao,OWALA,OWALA·Freesip Tumbler吸管不锈钢保冷保温杯便携水杯学生户外运动水壶,OWALA,Freesip Tumbler,,30oz / 890ml,Pink,ongoing,"pink, white",,,,,,,OWALA·Freesip Tumbler吸管不锈钢保冷保温杯便携水杯学生户外运动水壶
+XHS-022,Rednote,,FreeSip Sway,Owala,FreeSip Sway,,710ml,Sage Green,unknown,"sage green, white, beige",,,,,,,How to Clean the FreeSip Sway. 清洗步骤
+XHS-023,Taobao,OWALA,OWALA·吸管杯不锈钢保温杯便携水杯男女户外运动杯子,OWALA,吸管杯,,24oz (710ml),蒸烧绿(Open Air),unknown,"pink, white, purple, gray",,,,,,"Return shipping subsidy, Ships within 24 hours on average, 7-day no reason return, Free shipping from Nanjing/Jiangsu",不锈钢保温杯便携水杯男女户外运动杯子
+XHS-024,Taobao,OWALA,OWALA·Freesip保温冷吸管不锈钢水杯大容量杯子,OWALA,Freesip,,,,special edition,"pink, dark blue, cream/yellow",,,,,,"Return shipping subsidy, Promise to ship within 48 hours, delay compensation guaranteed, Nanjing Jiangsu Free shipping",OWALA·Freesip保温冷吸管不锈钢水杯大容量杯子 - Insulated cold-sip stainless steel water cup with large capacity
+XHS-025,Taobao,OWALA,【官旗认证】Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,OWALA,Freesip,,475ml,"Multiple colors (cream, pink, coral, navy, green shown)",ongoing,"cream, pink, coral, purple, navy, green, black",,,,,,Official store certification (官旗认证),"Freesip insulated water bottle with straw, stainless steel, portable, children's size 475ml. Return shipping subsidy, 81 positive reviews in 30 days"
+XHS-026,Rednote,OWALA,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,Owala,Freesip,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,475ml,,ongoing,"cream, pink, purple, coral, white",,NEEDS REVIEW: claimed_colorway is empty,,,,官旗认证 (Official flagship store certified),【官旗认证】Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml。Return shipping subsidy、81 positive reviews in 30 days、Ships within 24 hours on average
+XHS-027,Rednote,OWALA,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,Owala,Freesip,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,475ml,,ongoing,"cream, white, pink, purple, coral, teal",,NEEDS REVIEW: claimed_colorway is empty,,,,"Official store (官旗认证), return shipping subsidy, 7-day no reason return, rapid refund",Flash sale ¥38.85 off. 81 positive reviews in 30 days. Ships within 24 hours on average. 355 sold.
+XHS-028,Rednote,OWALA,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,Owala,Freesip,Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml,475ml,Bunny Business,ongoing,"cream, white, pink, purple, coral, turquoise",,,,,,"official store, authentic",【官旗认证】Freesip保冷保温吸管不锈钢水杯户外便携儿童475ml
