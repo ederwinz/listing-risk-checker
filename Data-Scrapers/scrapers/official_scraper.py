@@ -342,6 +342,198 @@ BRANDS = [
             },
         ],
     },
+    {
+        "brand": "Gymshark",
+        "collections": [
+            # ── Iconic seamless lines ────────────────────────────────────────
+            {
+                "url": "https://gymshark.myshopify.com/collections/adapt-leggings/products.json",
+                "product_line": "Adapt", "model_name": "Adapt", "id_prefix": "gs-adapt", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/gains-seamless/products.json",
+                "product_line": "Gains Seamless", "model_name": "Gains Seamless", "id_prefix": "gs-gains", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/geo-seamless/products.json",
+                "product_line": "Geo Seamless", "model_name": "Geo Seamless", "id_prefix": "gs-geo", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/lift-seamless/products.json",
+                "product_line": "Lift Seamless", "model_name": "Lift Seamless", "id_prefix": "gs-lift", "variant_strategy": "by_title_suffix",
+            },
+            # ── Named product lines ──────────────────────────────────────────
+            {
+                "url": "https://gymshark.myshopify.com/collections/315/products.json",
+                "product_line": "315", "model_name": "315", "id_prefix": "gs-315", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/apex/products.json",
+                "product_line": "Apex", "model_name": "Apex", "id_prefix": "gs-apex", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/elevate/products.json",
+                "product_line": "Elevate", "model_name": "Elevate", "id_prefix": "gs-elevate", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/legacy/products.json",
+                "product_line": "Legacy", "model_name": "Legacy", "id_prefix": "gs-legacy", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/crest/products.json",
+                "product_line": "Crest", "model_name": "Crest", "id_prefix": "gs-crest", "variant_strategy": "by_title_suffix",
+            },
+            # ── Core categories ──────────────────────────────────────────────
+            {
+                "url": "https://gymshark.myshopify.com/collections/hoodies/products.json",
+                "product_line": "Hoodie", "model_name": "Hoodie", "id_prefix": "gs-hoodie", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/joggers/products.json",
+                "product_line": "Joggers", "model_name": "Joggers", "id_prefix": "gs-joggers", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/crop-tops/products.json",
+                "product_line": "Crop Top", "model_name": "Crop Top", "id_prefix": "gs-croptop", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/2-in-1-shorts/products.json",
+                "product_line": "2-in-1 Shorts", "model_name": "2-in-1 Shorts", "id_prefix": "gs-shorts", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://gymshark.myshopify.com/collections/baby-tees/products.json",
+                "product_line": "Baby Tee", "model_name": "Baby Tee", "id_prefix": "gs-babytee", "variant_strategy": "by_title_suffix",
+            },
+        ],
+    },
+    # ── Alphalete Athletics ──────────────────────────────────────────────────
+    {
+        "brand": "Alphalete",
+        "collections": [
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/womens-amplify/products.json",
+                "product_line": "Amplify", "model_name": "Amplify", "id_prefix": "ala-amplify", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/womens-aura/products.json",
+                "product_line": "Aura", "model_name": "Aura", "id_prefix": "ala-aura", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/womens-pump/products.json",
+                "product_line": "Pump", "model_name": "Pump", "id_prefix": "ala-pump", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/womens-tenacity/products.json",
+                "product_line": "Tenacity", "model_name": "Tenacity", "id_prefix": "ala-tenacity", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/mens-zero/products.json",
+                "product_line": "Zero", "model_name": "Zero", "id_prefix": "ala-zero", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/mens-airtech/products.json",
+                "product_line": "Airtech", "model_name": "Airtech", "id_prefix": "ala-airtech", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alphaleteathletics.myshopify.com/collections/trending-terra/products.json",
+                "product_line": "Terra", "model_name": "Terra", "id_prefix": "ala-terra", "variant_strategy": "by_title_suffix",
+            },
+        ],
+    },
+    # ── NVGTN ────────────────────────────────────────────────────────────────
+    {
+        "brand": "NVGTN",
+        "collections": [
+            {
+                "url": "https://nvgtn.myshopify.com/collections/contour-seamless-leggings/products.json",
+                "product_line": "Contour Seamless", "model_name": "Contour Seamless Leggings", "id_prefix": "nvgtn-contour", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/camo-seamless-leggings/products.json",
+                "product_line": "Camo Seamless", "model_name": "Camo Seamless Leggings", "id_prefix": "nvgtn-camo", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/scrunch-seamless-leggings/products.json",
+                "product_line": "Scrunch Seamless", "model_name": "Scrunch Seamless Leggings", "id_prefix": "nvgtn-scrunch", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/lift-seamless-leggings/products.json",
+                "product_line": "Lift Seamless", "model_name": "Lift Seamless Leggings", "id_prefix": "nvgtn-lift", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/digital-seamless-leggings/products.json",
+                "product_line": "Digital Seamless", "model_name": "Digital Seamless Leggings", "id_prefix": "nvgtn-digital", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/solid-seamless-leggings/products.json",
+                "product_line": "Solid Seamless", "model_name": "Solid Seamless Leggings", "id_prefix": "nvgtn-solid", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/signature-2-0-leggings/products.json",
+                "product_line": "Signature 2.0", "model_name": "Signature 2.0 Leggings", "id_prefix": "nvgtn-sig20", "variant_strategy": "by_title_prefix",
+            },
+            {
+                "url": "https://nvgtn.myshopify.com/collections/pro-shorts/products.json",
+                "product_line": "Pro Shorts", "model_name": "Pro Shorts", "id_prefix": "nvgtn-proshorts", "variant_strategy": "by_title_prefix",
+            },
+        ],
+    },
+    # ── Gymreapers ───────────────────────────────────────────────────────────
+    {
+        "brand": "Gymreapers",
+        "collections": [
+            {
+                "url": "https://gymreapers.myshopify.com/collections/shirts/products.json",
+                "product_line": "Shirt", "model_name": "Shirt", "id_prefix": "gr-shirt", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://gymreapers.myshopify.com/collections/graphic-tees/products.json",
+                "product_line": "Graphic Tee", "model_name": "Graphic Tee", "id_prefix": "gr-graphictee", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://gymreapers.myshopify.com/collections/hoodies-jackets/products.json",
+                "product_line": "Hoodie", "model_name": "Hoodie", "id_prefix": "gr-hoodie", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://gymreapers.myshopify.com/collections/lifting-gear/products.json",
+                "product_line": "Lifting Gear", "model_name": "Lifting Gear", "id_prefix": "gr-gear", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://gymreapers.myshopify.com/collections/knee-elbow-sleeves/products.json",
+                "product_line": "Sleeves", "model_name": "Sleeves", "id_prefix": "gr-sleeve", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://gymreapers.myshopify.com/collections/lifting-straps/products.json",
+                "product_line": "Lifting Straps", "model_name": "Lifting Straps", "id_prefix": "gr-straps", "variant_strategy": "by_color_option",
+            },
+        ],
+    },
+    # ── Rhone ────────────────────────────────────────────────────────────────
+    {
+        "brand": "Rhone",
+        "collections": [
+            {
+                "url": "https://rhone.myshopify.com/collections/mens-commuter-shirt-collection/products.json",
+                "product_line": "Commuter Shirt", "model_name": "Commuter Shirt", "id_prefix": "rh-commutershirt", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://rhone.myshopify.com/collections/mens-athletic-shorts/products.json",
+                "product_line": "Athletic Shorts", "model_name": "Athletic Shorts", "id_prefix": "rh-shorts", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://rhone.myshopify.com/collections/mens-hoodies-pullovers/products.json",
+                "product_line": "Hoodie", "model_name": "Hoodie", "id_prefix": "rh-hoodie", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://rhone.myshopify.com/collections/mens-commuter-pants/products.json",
+                "product_line": "Commuter Pants", "model_name": "Commuter Pants", "id_prefix": "rh-commuterp", "variant_strategy": "by_color_option",
+            },
+            {
+                "url": "https://rhone.myshopify.com/collections/mens-golf-apparel/products.json",
+                "product_line": "Golf", "model_name": "Golf", "id_prefix": "rh-golf", "variant_strategy": "by_color_option",
+            },
+        ],
+    },
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; brand-reference-scraper/2.0)"}
@@ -436,9 +628,17 @@ def next_id_num(prefix: str) -> int:
 # ── Shopify API ────────────────────────────────────────────────────────────────
 
 def fetch_products(url: str) -> list[dict]:
-    resp = requests.get(url, headers=HEADERS, timeout=30, params={"limit": 250})
-    resp.raise_for_status()
-    return resp.json().get("products", [])
+    all_products: list[dict] = []
+    page = 1
+    while True:
+        resp = requests.get(url, headers=HEADERS, timeout=30, params={"limit": 250, "page": page})
+        resp.raise_for_status()
+        products = resp.json().get("products", [])
+        all_products.extend(products)
+        if len(products) < 250:
+            break
+        page += 1
+    return all_products
 
 
 def option_key_for(options: list[dict], names: list[str]) -> str | None:
@@ -520,7 +720,7 @@ def group_variants_by_colorway(products: list[dict], title_filter: str = "", sto
 
 # ── Strategy: by_product_title (Rhode) ────────────────────────────────────────
 
-def group_products_as_colorways(products: list[dict], model_name: str) -> dict[str, dict]:
+def group_products_as_colorways(products: list[dict], model_name: str, store_domain: str = "rhodeskin.com") -> dict[str, dict]:
     """
     Returns {shade_name: {sizes, price, sale_price, image_url, product_url}}.
     Each Shopify product = one shade.  Shade extracted by stripping model_name prefix
@@ -555,10 +755,151 @@ def group_products_as_colorways(products: list[dict], model_name: str) -> dict[s
                 price = f"${current}"
 
         image_url = product["images"][0]["src"] if product.get("images") else ""
-        product_url = f"https://rhodeskin.com/products/{product['handle']}"
+        product_url = f"https://{store_domain}/products/{product['handle']}"
 
         if shade not in colorways:
             colorways[shade] = {
+                "sizes": sizes,
+                "price": price,
+                "sale_price": sale_price,
+                "image_url": image_url,
+                "product_url": product_url,
+            }
+
+    return colorways
+
+
+# ── Strategy: by_title_prefix (NVGTN) ────────────────────────────────────────
+
+def group_products_by_title_prefix(products: list[dict], model_name: str, store_domain: str) -> dict[str, dict]:
+    """
+    Color is the PREFIX of the title; model_name is the SUFFIX to strip.
+    e.g. 'Black Speckled Contour Seamless Leggings' → model_name='Contour Seamless Leggings' → 'Black Speckled'.
+    """
+    colorways: dict[str, dict] = {}
+    suffix = model_name.lower().strip()
+
+    for product in products:
+        title = product.get("title", "")
+        title_lower = title.lower().strip()
+        if title_lower.endswith(suffix):
+            color = title[:len(title) - len(suffix)].strip().title() or "Original"
+        else:
+            color = title.strip().title() or "Original"
+
+        opts = product.get("options", [])
+        size_key = option_key_for(opts, ["size", "capacity", "volume"])
+        sizes: list[str] = []
+        for v in product.get("variants", []):
+            if size_key:
+                sz = (v.get(size_key) or "").strip()
+                if sz and sz != "Default Title" and sz not in sizes:
+                    sizes.append(sz)
+
+        variants = product.get("variants", [])
+        price, sale_price = "$0", ""
+        if variants:
+            v = variants[0]
+            current = v.get("price") or "0"
+            compare = v.get("compare_at_price")
+            if compare and float(compare) > float(current):
+                price, sale_price = f"${compare}", f"${current}"
+            else:
+                price = f"${current}"
+
+        image_url = product["images"][0]["src"] if product.get("images") else ""
+        product_url = f"https://{store_domain}/products/{product['handle']}"
+
+        if color not in colorways:
+            colorways[color] = {"sizes": sizes, "price": price, "sale_price": sale_price,
+                                 "image_url": image_url, "product_url": product_url}
+
+    return colorways
+
+
+# ── Strategy: by_title_parens (Born Primitive) ────────────────────────────────
+
+def group_products_by_title_parens(products: list[dict], store_domain: str) -> dict[str, dict]:
+    """
+    Color is in parentheses at the end of the title.
+    e.g. 'Versatile Short 5" (Black)' → 'Black'.
+    """
+    import re as _re
+    colorways: dict[str, dict] = {}
+
+    for product in products:
+        title = product.get("title", "")
+        m = _re.search(r'\(([^)]+)\)\s*$', title)
+        color = m.group(1).strip() if m else title.strip().title() or "Original"
+
+        opts = product.get("options", [])
+        size_key = option_key_for(opts, ["size", "capacity", "volume"])
+        sizes: list[str] = []
+        for v in product.get("variants", []):
+            if size_key:
+                sz = (v.get(size_key) or "").strip()
+                if sz and sz != "Default Title" and sz not in sizes:
+                    sizes.append(sz)
+
+        variants = product.get("variants", [])
+        price, sale_price = "$0", ""
+        if variants:
+            v = variants[0]
+            current = v.get("price") or "0"
+            compare = v.get("compare_at_price")
+            if compare and float(compare) > float(current):
+                price, sale_price = f"${compare}", f"${current}"
+            else:
+                price = f"${current}"
+
+        image_url = product["images"][0]["src"] if product.get("images") else ""
+        product_url = f"https://{store_domain}/products/{product['handle']}"
+
+        if color not in colorways:
+            colorways[color] = {"sizes": sizes, "price": price, "sale_price": sale_price,
+                                 "image_url": image_url, "product_url": product_url}
+
+    return colorways
+
+
+# ── Strategy: by_title_suffix (Gymshark) ──────────────────────────────────────
+
+def group_products_by_title_suffix(products: list[dict], store_domain: str) -> dict[str, dict]:
+    """
+    Returns {color: data} by extracting color from after the last ' - ' in the product title.
+    Used for Gymshark-style products: 'Gymshark Adapt Camo Leggings - Black' → 'Black'.
+    """
+    colorways: dict[str, dict] = {}
+
+    for product in products:
+        title = product.get("title", "")
+        color = title.split(" - ")[-1].strip() if " - " in title else "Original"
+
+        opts = product.get("options", [])
+        size_key = option_key_for(opts, ["size", "capacity", "volume"])
+        sizes: list[str] = []
+        for v in product.get("variants", []):
+            if size_key:
+                sz = (v.get(size_key) or "").strip()
+                if sz and sz not in ("Default Title",) and sz not in sizes:
+                    sizes.append(sz)
+
+        variants = product.get("variants", [])
+        price, sale_price = "$0", ""
+        if variants:
+            v = variants[0]
+            current = v.get("price") or "0"
+            compare = v.get("compare_at_price")
+            if compare and float(compare) > float(current):
+                price, sale_price = f"${compare}", f"${current}"
+            else:
+                price = f"${current}"
+
+        image_url = product["images"][0]["src"] if product.get("images") else ""
+        product_url = f"https://{store_domain}/products/{product['handle']}"
+
+        if color not in colorways:
+            colorways[color] = {
                 "sizes": sizes,
                 "price": price,
                 "sale_price": sale_price,
@@ -617,7 +958,13 @@ def scrape_collection(
 
     strategy = config.get("variant_strategy", "by_color_option")
     if strategy == "by_product_title":
-        colorways = group_products_as_colorways(products, config["model_name"])
+        colorways = group_products_as_colorways(products, config["model_name"], store_domain)
+    elif strategy == "by_title_suffix":
+        colorways = group_products_by_title_suffix(products, store_domain)
+    elif strategy == "by_title_prefix":
+        colorways = group_products_by_title_prefix(products, config["model_name"], store_domain)
+    elif strategy == "by_title_parens":
+        colorways = group_products_by_title_parens(products, store_domain)
     else:
         title_filter = config.get("title_contains", "")
         colorways = group_variants_by_colorway(products, title_filter, store_domain)
