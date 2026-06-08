@@ -12,6 +12,7 @@ Usage:
     python scrapers/official_scraper.py              # all brands
     python scrapers/official_scraper.py --brand Rhode   # Rhode only
     python scrapers/official_scraper.py --brand Owala   # Owala only
+    python scrapers/official_scraper.py --discover https://brand.com  # check if brand is on open Shopify
 """
 
 import argparse
@@ -166,11 +167,235 @@ BRANDS = [
                 "id_prefix": "rhode-highlightmilk",
                 "variant_strategy": "by_product_title",
             },
+            {
+                "url": "https://rhodeskin.myshopify.com/collections/glazing-mist/products.json",
+                "product_line": "Glazing Mist",
+                "model_name": "Glazing Mist",
+                "id_prefix": "rhode-glazingmist",
+                "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://rhodeskin.myshopify.com/collections/peptide-lip-boost/products.json",
+                "product_line": "Peptide Lip Boost",
+                "model_name": "Peptide Lip Boost",
+                "id_prefix": "rhode-lipboost",
+                "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://rhodeskin.myshopify.com/collections/peptide-eye-prep/products.json",
+                "product_line": "Peptide Eye Prep",
+                "model_name": "Peptide Eye Prep",
+                "id_prefix": "rhode-eyeprep",
+                "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://rhodeskin.myshopify.com/collections/peptide-glazing-fluid/products.json",
+                "product_line": "Peptide Glazing Fluid",
+                "model_name": "Peptide Glazing Fluid",
+                "id_prefix": "rhode-glazingfluid",
+                "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://rhodeskin.myshopify.com/collections/barrier-restore-cream/products.json",
+                "product_line": "Barrier Restore Cream",
+                "model_name": "Barrier Restore Cream",
+                "id_prefix": "rhode-barriercream",
+                "variant_strategy": "by_product_title",
+            },
+        ],
+    },
+    {
+        "brand": "e.l.f. Cosmetics",
+        "collections": [
+            # ── Face ──────────────────────────────────────────────────────────
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/blush/products.json",
+                "product_line": "Blush", "model_name": "Blush", "id_prefix": "elf-blush",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/bronzer/products.json",
+                "product_line": "Bronzer", "model_name": "Bronzer", "id_prefix": "elf-bronzer",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/concealer/products.json",
+                "product_line": "Concealer", "model_name": "Concealer", "id_prefix": "elf-concealer",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/foundation/products.json",
+                "product_line": "Foundation", "model_name": "Foundation", "id_prefix": "elf-foundation",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/highlight-contour/products.json",
+                "product_line": "Highlight & Contour", "model_name": "Highlight & Contour", "id_prefix": "elf-highlight",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/powder/products.json",
+                "product_line": "Powder", "model_name": "Powder", "id_prefix": "elf-powder",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/primer/products.json",
+                "product_line": "Primer", "model_name": "Primer", "id_prefix": "elf-primer",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/setting-spray/products.json",
+                "product_line": "Setting Spray", "model_name": "Setting Spray", "id_prefix": "elf-settingspray",
+            },
+            # ── Eyes ──────────────────────────────────────────────────────────
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/eyebrows/products.json",
+                "product_line": "Eyebrow", "model_name": "Eyebrow", "id_prefix": "elf-eyebrow",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/eyeliner/products.json",
+                "product_line": "Eyeliner", "model_name": "Eyeliner", "id_prefix": "elf-eyeliner",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/eyeshadow/products.json",
+                "product_line": "Eyeshadow", "model_name": "Eyeshadow", "id_prefix": "elf-eyeshadow",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/eyeshadow-palettes/products.json",
+                "product_line": "Eyeshadow Palette", "model_name": "Eyeshadow Palette", "id_prefix": "elf-palette",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/mascara/products.json",
+                "product_line": "Mascara", "model_name": "Mascara", "id_prefix": "elf-mascara",
+            },
+            # ── Lips ──────────────────────────────────────────────────────────
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/lip-colour/products.json",
+                "product_line": "Lip Color", "model_name": "Lip Color", "id_prefix": "elf-lipcolor",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/lip-gloss/products.json",
+                "product_line": "Lip Gloss", "model_name": "Lip Gloss", "id_prefix": "elf-lipgloss",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/lip-liner/products.json",
+                "product_line": "Lip Liner", "model_name": "Lip Liner", "id_prefix": "elf-lipliner",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/lipstick/products.json",
+                "product_line": "Lipstick", "model_name": "Lipstick", "id_prefix": "elf-lipstick",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/lip-care/products.json",
+                "product_line": "Lip Care", "model_name": "Lip Care", "id_prefix": "elf-lipcare",
+            },
+            # ── Skincare ──────────────────────────────────────────────────────
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/cleanser/products.json",
+                "product_line": "Cleanser", "model_name": "Cleanser", "id_prefix": "elf-cleanser",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/moisturizer/products.json",
+                "product_line": "Moisturizer", "model_name": "Moisturizer", "id_prefix": "elf-moisturizer",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/boosters-serums/products.json",
+                "product_line": "Serum", "model_name": "Serum", "id_prefix": "elf-serum",
+            },
+            {
+                "url": "https://elfcosmetics.myshopify.com/collections/eye-cream-treatments/products.json",
+                "product_line": "Eye Treatment", "model_name": "Eye Treatment", "id_prefix": "elf-eyetreatment",
+            },
+        ],
+    },
+    {
+        "brand": "YoungLA",
+        "collections": [
+            {
+                "url": "https://youngla.myshopify.com/collections/t-shirts/products.json",
+                "product_line": "T-Shirt", "model_name": "T-Shirt", "id_prefix": "yla-tshirt",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/shorts/products.json",
+                "product_line": "Shorts", "model_name": "Shorts", "id_prefix": "yla-shorts",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/joggers/products.json",
+                "product_line": "Joggers", "model_name": "Joggers", "id_prefix": "yla-joggers",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/tanks/products.json",
+                "product_line": "Tank", "model_name": "Tank", "id_prefix": "yla-tank",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/leggings/products.json",
+                "product_line": "Leggings", "model_name": "Leggings", "id_prefix": "yla-leggings",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/bras/products.json",
+                "product_line": "Sports Bra", "model_name": "Sports Bra", "id_prefix": "yla-bra",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/outerwear/products.json",
+                "product_line": "Outerwear", "model_name": "Outerwear", "id_prefix": "yla-outerwear",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/jeans/products.json",
+                "product_line": "Jeans", "model_name": "Jeans", "id_prefix": "yla-jeans",
+            },
+            {
+                "url": "https://youngla.myshopify.com/collections/hats/products.json",
+                "product_line": "Headwear", "model_name": "Headwear", "id_prefix": "yla-headwear",
+            },
         ],
     },
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; brand-reference-scraper/2.0)"}
+
+
+# ── Brand discovery ────────────────────────────────────────────────────────────
+
+def discover_brand(url: str):
+    """
+    Check if a brand is on open Shopify and print its collections.
+    Usage: python scrapers/official_scraper.py --discover https://brand.com
+    """
+    from urllib.parse import urlparse
+
+    domain = urlparse(url).netloc or url
+    domain = domain.removeprefix("www.")
+    stem = domain.split(".")[0]
+
+    candidates = [stem, f"{stem}-us", f"shop-{stem}", f"{stem}skin", f"{stem}beauty"]
+
+    print(f"\nSearching Shopify for '{domain}'...")
+
+    for handle in candidates:
+        test_url = f"https://{handle}.myshopify.com/collections.json"
+        try:
+            resp = requests.get(test_url, headers=HEADERS, timeout=10, params={"limit": 250})
+        except requests.ConnectionError:
+            continue
+        if resp.status_code != 200:
+            continue
+
+        try:
+            data = resp.json()
+        except Exception:
+            continue  # 200 but non-JSON body = locked Shopify store
+
+        collections = data.get("collections", [])
+        if not collections and not data:
+            continue
+
+        print(f"\n✓ Found: {handle}.myshopify.com")
+        print(f"\nCollections — choose which to add to BRANDS in official_scraper.py:\n")
+        for col in collections:
+            count = col.get("products_count", "?")
+            print(f"  {col['handle']:<45} ({count} products)")
+        print(f'\nExample BRANDS entry:')
+        print(f'  {{"url": "https://{handle}.myshopify.com/collections/HANDLE/products.json",')
+        print(f'   "product_line": "Product Line Name",')
+        print(f'   "model_name": "Model Name",')
+        print(f'   "id_prefix": "brand-line"}}')
+        return
+
+    print(f"\n✗ {domain} is not on open Shopify (tried: {', '.join(candidates)})")
+    print("  → Use official_page_scraper.py with product page URLs instead.")
 
 
 # ── Existing data ──────────────────────────────────────────────────────────────
@@ -230,7 +455,7 @@ def strip_units(size_str: str) -> str:
 
 # ── Strategy: by_color_option (Owala) ─────────────────────────────────────────
 
-def group_variants_by_colorway(products: list[dict], title_filter: str = "") -> dict[str, dict]:
+def group_variants_by_colorway(products: list[dict], title_filter: str = "", store_domain: str = "owala.com") -> dict[str, dict]:
     """
     Returns {colorway_name: {sizes, price, sale_price, image_url, product_url}}.
     Each color variant within a product → one row.  Used for Owala-style products.
@@ -250,7 +475,7 @@ def group_variants_by_colorway(products: list[dict], title_filter: str = "") -> 
             for vid in img.get("variant_ids", []):
                 images_by_variant[vid] = img["src"]
         default_image = product["images"][0]["src"] if product.get("images") else ""
-        product_url = f"https://owala.com/products/{product['handle']}"
+        product_url = f"https://{store_domain}/products/{product['handle']}"
 
         for variant in product.get("variants", []):
             colorway = (variant.get(color_key) or "").strip() if color_key else ""
@@ -386,12 +611,16 @@ def scrape_collection(
         print(f"    Connection failed — check VPN / network and retry.")
         return []
 
+    from urllib.parse import urlparse
+    shopify_host = urlparse(config["url"]).netloc  # e.g. elfcosmetics.myshopify.com
+    store_domain = shopify_host.replace(".myshopify.com", ".com")
+
     strategy = config.get("variant_strategy", "by_color_option")
     if strategy == "by_product_title":
         colorways = group_products_as_colorways(products, config["model_name"])
     else:
         title_filter = config.get("title_contains", "")
-        colorways = group_variants_by_colorway(products, title_filter)
+        colorways = group_variants_by_colorway(products, title_filter, store_domain)
 
     seq = next_id_num(config["id_prefix"])
     new_rows: list[dict] = []
@@ -467,12 +696,36 @@ def rewrite_csv_with_screenshot_updates(updates: dict[str, str]):
         writer.writerows(rows)
 
 
+# ── Full Sheets sync (used after backfill to update existing rows) ─────────────
+
+def _full_sheets_sync(tab: str):
+    try:
+        from sheets_sync import _get_client
+        rows = list(csv.DictReader(open(VERIFIED_CSV, newline="", encoding="utf-8")))
+        client = _get_client()
+        ws = client.open_by_key(os.environ["GOOGLE_SHEET_ID"]).worksheet(tab)
+        ws.clear()
+        data = [CSV_COLUMNS] + [[str(r.get(c, "")) for c in CSV_COLUMNS] for r in rows]
+        if ws.row_count < len(data) + 10:
+            ws.add_rows(len(data) + 10 - ws.row_count)
+        ws.update(values=data, range_name="A1", value_input_option="RAW")
+        print(f"  [Sheets] Full sync complete — {len(rows)} rows")
+    except Exception as e:
+        print(f"  [Sheets] Full sync failed ({e}) — CSV is up to date")
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
     parser = argparse.ArgumentParser(description="Scrape official product data into Verified_Products.csv")
     parser.add_argument("--brand", help="Only scrape this brand (e.g. Owala, Rhode)")
+    parser.add_argument("--discover", metavar="URL",
+                        help="Check if a brand is on open Shopify and list its collections")
     args = parser.parse_args()
+
+    if args.discover:
+        discover_brand(args.discover)
+        return
 
     existing = load_existing()
     updated_screenshots: dict[str, str] = {}
@@ -502,6 +755,9 @@ def main():
     if updated_screenshots:
         rewrite_csv_with_screenshot_updates(updated_screenshots)
         print(f"✓ Backfilled images for {len(updated_screenshots)} existing row(s)")
+        # Push the full CSV to Sheets so Screenshot="Yes" is reflected there too
+        tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
+        _full_sheets_sync(tab)
 
     if not all_new and not updated_screenshots:
         print("\nNo new products and no missing images — database is up to date.")
