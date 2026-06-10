@@ -677,6 +677,93 @@ def discover_brand(url: str):
     print("  → Use official_page_scraper.py with product page URLs instead.")
 
 
+def detect_variant_strategy(products: list) -> str:
+    """Guess the best extraction strategy by peeking at a few products."""
+    if not products:
+        return "by_product_title"
+    for prod in products[:5]:
+        for opt in prod.get("options", []):
+            if opt.get("name", "").lower() in ("color", "colour"):
+                return "by_color_option"
+    titles = [p.get("title", "") for p in products[:10]]
+    suffix_count = sum(1 for t in titles if " - " in t)
+    paren_count = sum(1 for t in titles if t.rstrip().endswith(")") and "(" in t)
+    if suffix_count > len(titles) / 2:
+        return "by_title_suffix"
+    if paren_count > len(titles) / 2:
+        return "by_title_parens"
+    return "by_product_title"
+
+
+def scrape_brand_dynamic(brand_name: str, shopify_handle: str) -> int:
+    """
+    Discover all collections for a Shopify handle, auto-detect variant strategy,
+    and scrape everything into Verified_Products. Returns number of new rows added.
+    Called by brand_scout.py --auto-scrape for newly discovered open-Shopify brands.
+    """
+    base_url = f"https://{shopify_handle}.myshopify.com"
+
+    resp = requests.get(f"{base_url}/collections.json", headers=HEADERS,
+                        timeout=15, params={"limit": 250})
+    if resp.status_code != 200:
+        print(f"  [auto-scrape] Could not fetch collections for {shopify_handle}")
+        return 0
+
+    collections = resp.json().get("collections", [])
+    if not collections:
+        print(f"  [auto-scrape] No collections found for {shopify_handle}")
+        return 0
+
+    print(f"\n{'='*60}\n{brand_name} (auto-scraped from {shopify_handle})\n{'='*60}")
+
+    existing = load_existing()
+    updated_screenshots: dict[str, str] = {}
+    all_rows: list[dict] = []
+    brand_slug = re.sub(r"[^\w]", "", brand_name.lower())
+
+    for col in collections:
+        col_handle = col["handle"]
+        col_title = col.get("title", col_handle)
+        if col.get("products_count", 1) == 0:
+            continue
+
+        prod_url = f"{base_url}/collections/{col_handle}/products.json"
+        prod_resp = requests.get(prod_url, headers=HEADERS, timeout=15, params={"limit": 5})
+        if prod_resp.status_code != 200:
+            continue
+        sample = prod_resp.json().get("products", [])
+        if not sample:
+            continue
+
+        strategy = detect_variant_strategy(sample)
+        id_prefix = f"{brand_slug[:8]}-{re.sub(r'[^\\w]', '', col_handle)[:10]}"
+
+        config = {
+            "url": prod_url,
+            "product_line": col_title,
+            "model_name": col_title,
+            "id_prefix": id_prefix,
+            "variant_strategy": strategy,
+        }
+        rows = scrape_collection(config, brand_name, existing, updated_screenshots)
+        all_rows.extend(rows)
+
+    if all_rows:
+        append_to_csv(all_rows)
+        print(f"\n✓ Added {len(all_rows)} new row(s) for {brand_name}")
+        tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
+        sheets_append(tab, all_rows, CSV_COLUMNS)
+        for row in all_rows:
+            supabase_sync.upsert_product(row)
+
+    if updated_screenshots:
+        rewrite_csv_with_screenshot_updates(updated_screenshots)
+        for iid, url in updated_screenshots.items():
+            supabase_sync.update_screenshot_url(iid, url)
+
+    return len(all_rows)
+
+
 # ── Existing data ──────────────────────────────────────────────────────────────
 
 def load_existing() -> dict[tuple, dict]:
@@ -1007,32 +1094,10 @@ def group_products_by_title_suffix(products: list[dict], store_domain: str) -> d
 
 def save_product_image(item_id: str, brand: str, id_prefix: str, image_url: str) -> str:
     """
-    Download a Shopify product image, upload to Supabase Storage, and save locally.
-    Returns the Supabase public URL, "Yes" (local-only), or "" on failure.
+    Returns the Shopify CDN URL directly — no download or local storage needed.
+    Claude vision can access Shopify CDN URLs directly for image comparison.
     """
-    if not image_url:
-        return ""
-    ext = Path(image_url.split("?")[0]).suffix or ".jpg"
-    try:
-        resp = requests.get(image_url, headers=HEADERS, timeout=30)
-        resp.raise_for_status()
-        img_bytes = resp.content
-    except Exception as e:
-        print(f"    [img] download failed: {e}")
-        return ""
-
-    storage_path = f"{brand.lower()}/{id_prefix}/{item_id}{ext}"
-    url = supabase_sync.upload_image(img_bytes, storage_path)
-
-    # Also save locally as backup during transition
-    try:
-        save_dir = SCREENSHOTS_DIR / brand.lower() / id_prefix
-        save_dir.mkdir(parents=True, exist_ok=True)
-        (save_dir / f"{item_id}{ext}").write_bytes(img_bytes)
-    except Exception:
-        pass
-
-    return url or "Yes"
+    return image_url or ""
 
 
 # ── Scraping ───────────────────────────────────────────────────────────────────

@@ -1,0 +1,65 @@
+[
+  {
+    "brand": "MIT",
+    "chinese_name": null,
+    "evidence": "MIT Management logo visible in the lower right section of the page with text '新说在麻 MIT 这个著港湾有人可以跨过线圈'",
+    "confidence": "high",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "美国健身品牌 leggings"
+  },
+  {
+    "brand": "Columbia",
+    "chinese_name": null,
+    "evidence": "Columbia University logo visible at the bottom of a post in the lower portion of the page",
+    "confidence": "high",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "美国健身品牌 leggings"
+  },
+  {
+    "brand": "Princess",
+    "chinese_name": null,
+    "evidence": "Princess account name visible in upper right section associated with 'GOOD NEWS FROM AROUND THE WORLD' content",
+    "confidence": "medium",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "美国健身品牌 leggings"
+  },
+  {
+    "brand": "MIT",
+    "chinese_name": null,
+    "evidence": "Listed in location information: 'p2: MIT, Columbia, Princess'",
+    "confidence": "medium",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "美国运动品牌推荐 gym wear"
+  },
+  {
+    "brand": "MIT",
+    "chinese_name": null,
+    "evidence": "MIT logo and text visible on a recruitment/offer poster in the bottom right section of the feed",
+    "confidence": "high",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "海外代购 leggings brand"
+  },
+  {
+    "brand": "Columbia",
+    "chinese_name": null,
+    "evidence": "Columbia University logo visible on what appears to be an academic or institutional document in the lower right portion of the feed",
+    "confidence": "high",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "海外代购 leggings brand"
+  },
+  {
+    "brand": "Claude",
+    "chinese_name": null,
+    "evidence": "Claude's Plan and Claude Code visible in the sidebar file structure and planning interface",
+    "confidence": "medium",
+    "platform": "Rednote",
+    "category": "fitness",
+    "query": "海外代购 leggings brand"
+  }
+]

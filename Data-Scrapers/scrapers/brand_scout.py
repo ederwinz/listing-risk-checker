@@ -50,17 +50,27 @@ PLATFORM_WEIGHTS = {"Rednote": 1.5, "Xianyu": 1.2, "Taobao": 1.0}
 MENTION_THRESHOLD = 3.0
 
 SEARCH_QUERIES = [
-    {"platform": "Rednote", "query": "美国健身品牌 leggings",       "category": "fitness"},
-    {"platform": "Rednote", "query": "美国运动品牌推荐 gym wear",   "category": "fitness"},
-    {"platform": "Rednote", "query": "美国护肤品推荐 skincare",     "category": "beauty"},
-    {"platform": "Rednote", "query": "海外代购 leggings brand",     "category": "fitness"},
-    {"platform": "Rednote", "query": "海外品牌 水杯 bottle",        "category": "accessories"},
-    {"platform": "Xianyu",  "query": "美国品牌 gym leggings",      "category": "fitness"},
-    {"platform": "Xianyu",  "query": "美国护肤品 正品",             "category": "beauty"},
-    {"platform": "Xianyu",  "query": "海外健身品牌 运动裤",         "category": "fitness"},
-    {"platform": "Taobao",  "query": "美国代购 健身品牌 leggings",  "category": "fitness"},
-    {"platform": "Taobao",  "query": "美国护肤品 代购",             "category": "beauty"},
-    {"platform": "Taobao",  "query": "海外运动品牌 代购",           "category": "fitness"},
+    # Fitness / activewear
+    {"platform": "Rednote", "query": "美国健身品牌 leggings",        "category": "fitness"},
+    {"platform": "Rednote", "query": "美国运动品牌推荐 gym wear",    "category": "fitness"},
+    {"platform": "Rednote", "query": "海外代购 leggings brand",      "category": "fitness"},
+    {"platform": "Rednote", "query": "海外健身品牌 bra shorts",      "category": "fitness"},
+    {"platform": "Xianyu",  "query": "美国品牌 gym leggings",       "category": "fitness"},
+    {"platform": "Xianyu",  "query": "海外健身品牌 运动裤",          "category": "fitness"},
+    {"platform": "Taobao",  "query": "美国代购 健身品牌 leggings",   "category": "fitness"},
+    {"platform": "Taobao",  "query": "海外运动品牌 代购",            "category": "fitness"},
+    # Beauty / skincare
+    {"platform": "Rednote", "query": "美国护肤品推荐 skincare",      "category": "beauty"},
+    {"platform": "Rednote", "query": "海外美妆品牌 lip balm",        "category": "beauty"},
+    {"platform": "Xianyu",  "query": "美国护肤品 正品",              "category": "beauty"},
+    {"platform": "Taobao",  "query": "美国护肤品 代购",              "category": "beauty"},
+    # Accessories / lifestyle
+    {"platform": "Rednote", "query": "海外品牌 水杯 bottle",         "category": "accessories"},
+    {"platform": "Rednote", "query": "美国生活方式品牌 lifestyle",    "category": "accessories"},
+    {"platform": "Xianyu",  "query": "美国品牌 水杯 保温杯",         "category": "accessories"},
+    # Streetwear
+    {"platform": "Rednote", "query": "美国潮牌 streetwear brand",    "category": "streetwear"},
+    {"platform": "Taobao",  "query": "美国潮牌 代购 hoodie",         "category": "streetwear"},
 ]
 
 # Chinese transliteration → canonical English name (grow this over time)
@@ -79,41 +89,52 @@ BRAND_ALIASES: dict[str, str] = {
 
 # Known domestic Chinese brands to ignore if the LLM slips them through
 DOMESTIC_BRANDS = {
+    # Chinese domestic apparel/sports
     "anta", "li-ning", "lining", "li ning", "peak", "xtep",
+    # Chinese domestic beauty
     "perfect diary", "florasis", "judydoll", "colorkey", "mac", "hera",
     "proya", "winona", "homefacial pro",
+    # Universities and institutions (not clothing brands)
+    "mit", "harvard", "yale", "columbia", "stanford", "princeton",
+    "oxford", "cambridge", "nyu", "ucla", "usc",
+    # Generic words Claude sometimes mis-extracts as brands
+    "claude", "anthropic", "openai",
 }
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; brand-scout/1.0)"}
 
-BRAND_EXTRACTION_PROMPT = """You are scanning a Chinese marketplace search results page to identify overseas (non-Chinese) brand names that Chinese consumers are buying or discussing.
+BRAND_EXTRACTION_PROMPT = """You are scanning a Chinese marketplace search results page to identify overseas (non-Chinese) clothing, beauty, or accessories BRANDS being sold or discussed by Chinese consumers.
 
 Platform: {platform}
 Category hint: {category}
 
-Find every overseas brand name visible anywhere on this page — in post titles, listing titles, tags, product names, or descriptions. Include:
-- English brand names in Roman letters (e.g. Gymshark, Owala, Rhode Island)
+A qualifying brand is a COMMERCIAL PRODUCT BRAND — a company that manufactures and sells physical products (apparel, skincare, accessories, gear). Only include it if it appears in the context of someone buying, selling, or reviewing that brand's products.
+
+Include:
+- English brand names in Roman letters (e.g. Gymshark, Owala, Alphalete)
 - Chinese transliterations of foreign brands (e.g. 欧娜 = Owala, 露露柠檬 = Lululemon)
 - Brand names mixing Chinese and English (e.g. "lululemon瑜伽裤")
 
-EXCLUDE:
-- Chinese domestic brands (Anta, Li-Ning, Perfect Diary, Florasis, Judydoll, Colorkey, Proya, Winona, etc.)
-- Generic product words (leggings, 瑜伽裤, skincare, 护肤品, gym wear, 运动服)
+EXCLUDE — do not extract these even if visible on screen:
+- Universities, colleges, or institutions (MIT, Columbia, Harvard, Stanford, etc.) — these are NOT clothing brands
+- Chinese domestic brands (Anta, Li-Ning, Perfect Diary, Florasis, etc.)
+- Generic product words (leggings, 瑜伽裤, skincare, gym wear, 运动服)
 - Platform names (Taobao, Xianyu, Rednote, 闲鱼, 淘宝, 小红书)
 - Non-brand words (代购, 正品, 海外, 美国, 推荐)
-- Nike, Adidas, Under Armour (too broad/obvious to add)
+- Text visible in the background or on unrelated graphics (logos of places, events, etc.)
+- Nike, Adidas, Under Armour (too mainstream to be useful)
 
 Return ONLY a valid JSON array — no explanation, no markdown fences:
 [
   {{
     "brand": "The brand name in English (translate/romanize if you saw it in Chinese)",
     "chinese_name": "The Chinese transliteration if you saw one, otherwise null",
-    "evidence": "1-sentence snippet of context where this brand appeared",
+    "evidence": "1-sentence snippet showing this was a product brand being sold/discussed",
     "confidence": "high | medium | low"
   }}
 ]
 
-Return [] if no qualifying overseas brands are visible. Only include brands explicitly on screen."""
+Return [] if no qualifying commercial product brands are visible. When in doubt, do not include."""
 
 
 # ── URL builders ───────────────────────────────────────────────────────────────
@@ -189,6 +210,75 @@ def screenshot_search_page(
         return None
 
     return dest
+
+
+def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
+    """
+    Search the Rednote Mac app and screenshot results.
+    Requires Accessibility permission: System Settings → Privacy & Security →
+    Accessibility → enable Terminal (or whichever app runs this script).
+    """
+    import subprocess as _sp
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    # Already captured on a previous run — reuse
+    if dest.exists() and dest.stat().st_size > 50_000:
+        return dest
+
+    # Activate app and type search query
+    safe_query = query.replace('"', '\\"')
+    search_script = f"""
+    tell application "Rednote" to activate
+    delay 1.5
+    tell application "System Events"
+        tell process "Rednote"
+            keystroke "f" using {{command down}}
+            delay 0.8
+            keystroke "{safe_query}"
+            key code 36
+        end tell
+    end tell
+    """
+    _sp.run(["osascript", "-e", search_script], capture_output=True)
+    time.sleep(3)
+
+    # Scroll down for pages beyond 1
+    if page > 1:
+        scroll_script = f"""
+        tell application "System Events"
+            tell process "Rednote"
+                repeat {(page - 1) * 8} times
+                    key code 125
+                    delay 0.05
+                end repeat
+            end tell
+        end tell
+        """
+        _sp.run(["osascript", "-e", scroll_script], capture_output=True)
+        time.sleep(2)
+
+    # Get window bounds and capture just the Rednote window
+    bounds_script = """
+    tell application "System Events"
+        tell process "Rednote"
+            get position of front window & size of front window
+        end tell
+    end tell
+    """
+    result = _sp.run(["osascript", "-e", bounds_script], capture_output=True, text=True)
+    try:
+        coords = [int(v.strip()) for v in result.stdout.strip().split(",")]
+        x, y, w, h = coords
+        _sp.run(["screencapture", "-R", f"{x},{y},{w},{h}", "-o", str(dest)])
+    except Exception:
+        _sp.run(["screencapture", "-o", str(dest)])  # fallback: full screen
+
+    if dest.exists() and dest.stat().st_size > 50_000:
+        return dest
+
+    print(f"    WARN: app screenshot too small or missing — check Accessibility permissions")
+    return None
 
 
 # ── Extraction ─────────────────────────────────────────────────────────────────
@@ -425,6 +515,12 @@ def main():
                         help="Result pages to screenshot per query (default 2)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Extract brands only, skip Shopify probing")
+    parser.add_argument("--use-app", action="store_true",
+                        help="Use Rednote Mac app instead of browser (Rednote queries only)")
+    parser.add_argument("--screenshots-only", action="store_true",
+                        help="Take screenshots only, skip Claude extraction (run VPN-off first, then re-run VPN-on)")
+    parser.add_argument("--auto-scrape", action="store_true",
+                        help="Automatically scrape brands found with open Shopify into Verified_Products")
     args = parser.parse_args()
 
     if not args.all and not args.category and not args.platform:
@@ -432,12 +528,13 @@ def main():
         print("\nExample: python scrapers/brand_scout.py --all")
         return
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("ERROR: ANTHROPIC_API_KEY not set in .env")
-        return
-
-    client = anthropic.Anthropic(api_key=api_key)
+    client = None
+    if not args.screenshots_only:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            print("ERROR: ANTHROPIC_API_KEY not set in .env")
+            return
+        client = anthropic.Anthropic(api_key=api_key)
     run_date = datetime.now().strftime("%Y-%m-%d")
     output_dir = SCOUTS_DIR / run_date
 
@@ -475,15 +572,24 @@ def main():
             if not url:
                 continue
 
-            img_path = screenshot_search_page(
-                url, platform, slug, page_num, args.user_data_dir, output_dir
-            )
+            if args.use_app and platform == "Rednote":
+                dest = output_dir / f"{platform}_{slug}_p{page_num}.png"
+                img_path = screenshot_rednote_app(query, page_num, dest)
+            else:
+                img_path = screenshot_search_page(
+                    url, platform, slug, page_num, args.user_data_dir, output_dir
+                )
 
             if img_path is None:
                 screenshots_skipped += 1
                 continue
 
             screenshots_taken += 1
+
+            if args.screenshots_only:
+                print(f"    p{page_num}: screenshot saved")
+                continue
+
             brands = extract_brands_from_screenshot(img_path, platform, category, client)
 
             for b in brands:
@@ -560,6 +666,19 @@ def main():
     sheets_append(tab, output_rows, CANDIDATES_COLUMNS)
 
     print_action_report(output_rows, run_date)
+
+    if args.auto_scrape and not args.dry_run:
+        open_brands = [r for r in output_rows if r["Shopify Status"] == "open"]
+        if open_brands:
+            print(f"\n=== Auto-scraping {len(open_brands)} open-Shopify brand(s) ===")
+            sys.path.insert(0, str(Path(__file__).parent))
+            from official_scraper import scrape_brand_dynamic
+            total_new = 0
+            for r in open_brands:
+                total_new += scrape_brand_dynamic(r["Brand Name"], r["Shopify Handle"])
+            print(f"\n✓ Auto-scrape complete — {total_new} total new rows added to Verified_Products")
+        else:
+            print("\nNo open-Shopify brands found this run — nothing to auto-scrape.")
 
 
 if __name__ == "__main__":

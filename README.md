@@ -17,14 +17,21 @@ Both tools write to local CSVs and sync to a shared Google Sheet.
 
 ## Current database
 
-| Brand | Rows |
-|-------|------|
-| Owala | 122  |
-| Rhode | 64   |
-
-Owala covers: FreeSip, Kids' FreeSip, FreeSip Tumbler, FreeSip Sway, FreeSip Twist, Kids' Tumbler, SmoothSip
-
-Rhode covers: Peptide Lip Tint, Peptide Lip Treatment, Peptide Lip Shape, Pocket Blush, Pocket Bronze, Glazing Milk, Barrier Butter, Spotwear, Highlight Milk
+| Brand | Notes |
+|-------|-------|
+| YoungLA | Apparel |
+| Gymshark | Apparel |
+| e.l.f. Cosmetics | Cosmetics |
+| Rhone | Men's apparel |
+| NVGTN | Seamless leggings |
+| Gymreapers | Lifting apparel & gear |
+| Alphalete | Activewear |
+| Owala | Drinkware |
+| Rhode | Skincare & lip |
+| Buff Bunny | Activewear |
+| Popflex | Activewear |
+| Summer Fridays | Skincare |
+| **Total** | **~3,488 rows** |
 
 ---
 
@@ -51,7 +58,7 @@ Place your Google service account key at `Data-Scrapers/google-credentials.json`
 
 ## Usage
 
-All commands run from `Data-Scrapers/`:
+All commands run from `Data-Scrapers/`. Use `/opt/anaconda3/bin/python3.12` — the system `/usr/bin/python3` is missing required packages:
 
 ```bash
 # Scrape official product data (all brands)
@@ -60,6 +67,14 @@ python scrapers/official_scraper.py
 # Scrape one brand only
 python scrapers/official_scraper.py --brand Rhode
 python scrapers/official_scraper.py --brand Owala
+
+# Check if a new brand is on open Shopify and list its collections
+python scrapers/official_scraper.py --discover https://brand.com
+
+# Scrape official product pages for brands without a public Shopify API
+python scrapers/official_page_scraper.py \
+  --brand Glossier --product-line "Balm Dotcom" \
+  --id-prefix glossier-balmdotcom --urls glossier_urls.txt
 
 # Extract listings from screenshots dropped in inbox/
 python scrapers/listing_extractor.py --platform Rednote
@@ -72,7 +87,7 @@ python scrapers/listing_extractor.py --urls listing_urls.txt --platform Rednote 
   --user-data-dir "/Users/you/Library/Application Support/Google/Chrome/Default"
 ```
 
-The official scraper automatically downloads product reference images to `Product Screenshots/` and retries any failed downloads on the next run.
+The official scraper stores Shopify CDN URLs directly as reference images — no local download. Any row with a missing image URL is retried on the next run.
 
 ---
 
@@ -92,7 +107,7 @@ The official scraper automatically downloads product reference images to `Produc
 | Price | Original/MSRP price |
 | Sale Price | Discounted price, blank if none |
 | Trust Level | 5 = official brand site, 4 = authorized retailer |
-| Screenshot | Yes/No — whether a reference image was downloaded |
+| Screenshot | Shopify CDN URL (new rows) or Yes/No (legacy rows) |
 
 **`Test_Listings.csv`** — marketplace listings for comparison engine testing. IDs follow `XHS-NNN`. Rows with `NEEDS REVIEW:` in `notes` need manual inspection.
 
@@ -100,7 +115,13 @@ The official scraper automatically downloads product reference images to `Produc
 
 ## Adding a new brand
 
-In `scrapers/official_scraper.py`, add an entry to the `BRANDS` list:
+### Step 1: Check if the brand is on open Shopify
+
+```bash
+python scrapers/official_scraper.py --discover https://brand.com
+```
+
+If it finds a match, it prints all available collections. Copy the ones you want into the `BRANDS` list in `official_scraper.py`:
 
 ```python
 {
@@ -111,13 +132,33 @@ In `scrapers/official_scraper.py`, add an entry to the `BRANDS` list:
             "product_line": "Product Line Name",
             "model_name": "Model Name",
             "id_prefix": "yourbrand-line",
-            # Use "by_product_title" if each Shopify product is one shade (like Rhode)
-            # Omit for the default Owala-style (color variants within a product)
-            "variant_strategy": "by_product_title",
+            # variant_strategy options:
+            #   "by_color_option"  (default) — product has Color + Size options (Owala, e.l.f., Gymreapers, Rhone)
+            #   "by_product_title"           — each product IS one shade; name from title (Rhode)
+            #   "by_title_suffix"            — color after last " - " in title (Gymshark, Alphalete)
+            #   "by_title_prefix"            — color is title prefix; strip model_name from end (NVGTN)
+            #   "by_title_parens"            — color in last parentheses: "Shirt (Black)" (no current brand)
+            "variant_strategy": "by_color_option",
         },
     ],
 },
 ```
+
+Then run: `python scrapers/official_scraper.py --brand YourBrand`
+
+### Step 2 (fallback): If the brand is NOT on open Shopify
+
+Create a text file with official product page URLs (one per line), then run:
+
+```bash
+python scrapers/official_page_scraper.py \
+  --brand BrandName \
+  --product-line "Product Line Name" \
+  --id-prefix brandname-line \
+  --urls urls.txt
+```
+
+The scraper screenshots each page and uses Claude vision to extract all visible colorways. Each colorway becomes a row in `Verified_Products.csv`.
 
 ---
 
