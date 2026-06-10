@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from dotenv import load_dotenv
 from sheets_sync import append_rows as sheets_append
+import supabase_sync
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -534,6 +535,92 @@ BRANDS = [
             },
         ],
     },
+    {
+        "brand": "Buff Bunny",
+        "store_domain": "buffbunny.com",
+        "collections": [
+            {
+                "url": "https://buffbunny.myshopify.com/collections/airbrush-fabric/products.json",
+                "product_line": "Airbrush", "model_name": "Airbrush", "id_prefix": "bb-airbrush", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://buffbunny.myshopify.com/collections/nubre-fabric/products.json",
+                "product_line": "NuBre", "model_name": "NuBre", "id_prefix": "bb-nubre", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://buffbunny.myshopify.com/collections/butter-fabric/products.json",
+                "product_line": "Butter", "model_name": "Butter", "id_prefix": "bb-butter", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://buffbunny.myshopify.com/collections/seamless-fabric/products.json",
+                "product_line": "Seamless", "model_name": "Seamless", "id_prefix": "bb-seamless", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://buffbunny.myshopify.com/collections/poshknit-fabric/products.json",
+                "product_line": "PoshKnit", "model_name": "PoshKnit", "id_prefix": "bb-poshknit", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://buffbunny.myshopify.com/collections/miracle-seamless/products.json",
+                "product_line": "Miracle Seamless", "model_name": "Miracle Seamless", "id_prefix": "bb-miracle", "variant_strategy": "by_title_suffix",
+            },
+        ],
+    },
+    {
+        "brand": "Popflex",
+        "store_domain": "popflex.active",
+        "collections": [
+            {
+                "url": "https://popflex.myshopify.com/collections/crisscross-hourglass-leggings/products.json",
+                "product_line": "Crisscross Hourglass", "model_name": "Crisscross Hourglass", "id_prefix": "pfx-crisscross", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://popflex.myshopify.com/collections/cloud-hoodies/products.json",
+                "product_line": "Cloud Hoodie", "model_name": "Cloud Hoodie", "id_prefix": "pfx-cloudhoodie", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://popflex.myshopify.com/collections/pirouette-skorts/products.json",
+                "product_line": "Pirouette", "model_name": "Pirouette", "id_prefix": "pfx-pirouette", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://popflex.myshopify.com/collections/leggings/products.json",
+                "product_line": "Leggings", "model_name": "Leggings", "id_prefix": "pfx-leggings", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://popflex.myshopify.com/collections/bras/products.json",
+                "product_line": "Sports Bra", "model_name": "Sports Bra", "id_prefix": "pfx-bras", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://popflex.myshopify.com/collections/shorts/products.json",
+                "product_line": "Shorts", "model_name": "Shorts", "id_prefix": "pfx-shorts", "variant_strategy": "by_title_suffix",
+            },
+        ],
+    },
+    {
+        "brand": "Summer Fridays",
+        "store_domain": "summerfridays.com",
+        "collections": [
+            {
+                "url": "https://summerfridaysbeauty.myshopify.com/collections/all-lip-butter-balm/products.json",
+                "product_line": "Lip Butter Balm", "model_name": "Lip Butter Balm", "id_prefix": "sf-lbb", "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://summerfridaysbeauty.myshopify.com/collections/dream-lip-oil-collection/products.json",
+                "product_line": "Dream Lip Oil", "model_name": "Dream Lip Oil", "id_prefix": "sf-dreamlipoil", "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://summerfridaysbeauty.myshopify.com/collections/flushed-lip-stains/products.json",
+                "product_line": "Flushed Lip Stain", "model_name": "Flushed Lip Stain", "id_prefix": "sf-flushed", "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://summerfridaysbeauty.myshopify.com/collections/softline-lip-liners/products.json",
+                "product_line": "Softline Lip Liner", "model_name": "SoftLine Lip Liner", "id_prefix": "sf-lipliner", "variant_strategy": "by_product_title",
+            },
+            {
+                "url": "https://summerfridaysbeauty.myshopify.com/collections/exchange-bronzer-butter-balm/products.json",
+                "product_line": "Bronzer Butter Balm", "model_name": "Bronzer Butter Balm", "id_prefix": "sf-bronzer", "variant_strategy": "by_product_title",
+            },
+        ],
+    },
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; brand-reference-scraper/2.0)"}
@@ -594,9 +681,12 @@ def discover_brand(url: str):
 
 def load_existing() -> dict[tuple, dict]:
     """
-    Returns {(brand, product_line, colorway): {"item_id": ..., "screenshot": ...}}
-    for every row already in the CSV.  Used for deduplication and backfill tracking.
+    Returns {(brand, product_line, colorway): {"item_id": ..., "screenshot": ...}}.
+    Queries Supabase when configured; falls back to reading the local CSV.
     """
+    sb = supabase_sync.load_existing()
+    if sb:
+        return sb
     if not VERIFIED_CSV.exists():
         return {}
     result = {}
@@ -613,6 +703,9 @@ def load_existing() -> dict[tuple, dict]:
 
 def next_id_num(prefix: str) -> int:
     """Returns the next integer to use for a given ID prefix."""
+    sb_num = supabase_sync.next_id_num(prefix)
+    if sb_num is not None:
+        return sb_num
     if not VERIFIED_CSV.exists():
         return 1
     pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
@@ -912,22 +1005,34 @@ def group_products_by_title_suffix(products: list[dict], store_domain: str) -> d
 
 # ── Image download ─────────────────────────────────────────────────────────────
 
-def save_product_image(item_id: str, brand: str, id_prefix: str, image_url: str) -> bool:
-    """Download a Shopify product image and save under Product Screenshots/."""
+def save_product_image(item_id: str, brand: str, id_prefix: str, image_url: str) -> str:
+    """
+    Download a Shopify product image, upload to Supabase Storage, and save locally.
+    Returns the Supabase public URL, "Yes" (local-only), or "" on failure.
+    """
     if not image_url:
-        return False
+        return ""
     ext = Path(image_url.split("?")[0]).suffix or ".jpg"
-    save_dir = SCREENSHOTS_DIR / brand.lower() / id_prefix
-    save_dir.mkdir(parents=True, exist_ok=True)
-    dest = save_dir / f"{item_id}{ext}"
     try:
         resp = requests.get(image_url, headers=HEADERS, timeout=30)
         resp.raise_for_status()
-        dest.write_bytes(resp.content)
-        return True
+        img_bytes = resp.content
     except Exception as e:
-        print(f"    [img] {e}")
-        return False
+        print(f"    [img] download failed: {e}")
+        return ""
+
+    storage_path = f"{brand.lower()}/{id_prefix}/{item_id}{ext}"
+    url = supabase_sync.upload_image(img_bytes, storage_path)
+
+    # Also save locally as backup during transition
+    try:
+        save_dir = SCREENSHOTS_DIR / brand.lower() / id_prefix
+        save_dir.mkdir(parents=True, exist_ok=True)
+        (save_dir / f"{item_id}{ext}").write_bytes(img_bytes)
+    except Exception:
+        pass
+
+    return url or "Yes"
 
 
 # ── Scraping ───────────────────────────────────────────────────────────────────
@@ -977,12 +1082,13 @@ def scrape_collection(
 
         if key in existing:
             info = existing[key]
-            if info["screenshot"] == "No" and data.get("image_url"):
-                ok = save_product_image(
+            has_screenshot = info["screenshot"] not in ("No", "", None)
+            if not has_screenshot and data.get("image_url"):
+                img_result = save_product_image(
                     info["item_id"], brand, config["id_prefix"], data["image_url"]
                 )
-                if ok:
-                    updated_screenshots[info["item_id"]] = "Yes"
+                if img_result:
+                    updated_screenshots[info["item_id"]] = img_result
                     print(f"    img  {info['item_id']}  {colorway}")
             else:
                 print(f"    skip {colorway}")
@@ -992,7 +1098,7 @@ def scrape_collection(
         sizes_str = ", ".join(data["sizes"])
         sale_label = f" → sale {data['sale_price']}" if data["sale_price"] else ""
 
-        img_ok = save_product_image(item_id, brand, config["id_prefix"], data["image_url"])
+        img_result = save_product_image(item_id, brand, config["id_prefix"], data["image_url"])
 
         row = {
             "Item ID": item_id,
@@ -1008,14 +1114,14 @@ def scrape_collection(
             "Trust Level": "5",
             "Source Type": "Official Page",
             "Source URL": data["product_url"],
-            "Screenshot": "Yes" if img_ok else "No",
+            "Screenshot": img_result,
             "Notes": f"Auto-scraped {datetime.now().strftime('%Y-%m-%d')}",
         }
         new_rows.append(row)
-        existing[key] = {"item_id": item_id, "screenshot": row["Screenshot"]}
+        existing[key] = {"item_id": item_id, "screenshot": img_result}
         seq += 1
         print(f"    +  {item_id}  {colorway}  ({sizes_str})  {data['price']}{sale_label}"
-              + ("  [img]" if img_ok else ""))
+              + ("  [img]" if img_result else ""))
 
     return new_rows
 
@@ -1098,11 +1204,14 @@ def main():
         print(f"\n✓ Added {len(all_new)} new row(s) to {VERIFIED_CSV.name}")
         tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
         sheets_append(tab, all_new, CSV_COLUMNS)
+        for row in all_new:
+            supabase_sync.upsert_product(row)
 
     if updated_screenshots:
         rewrite_csv_with_screenshot_updates(updated_screenshots)
         print(f"✓ Backfilled images for {len(updated_screenshots)} existing row(s)")
-        # Push the full CSV to Sheets so Screenshot="Yes" is reflected there too
+        for item_id, screenshot_val in updated_screenshots.items():
+            supabase_sync.update_screenshot_url(item_id, screenshot_val)
         tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
         _full_sheets_sync(tab)
 

@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from dotenv import load_dotenv
 from sheets_sync import append_rows as sheets_append
+import supabase_sync
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -208,6 +209,7 @@ def append_row(row: dict):
         writer.writerow(row)
     tab = os.environ.get("TEST_LISTINGS_TAB", "Test_Listings")
     sheets_append(tab, [row], CSV_COLUMNS)
+    supabase_sync.upsert_listing(row)
 
 
 def process_image(image_path: Path, client: anthropic.Anthropic, platform_override: str | None,

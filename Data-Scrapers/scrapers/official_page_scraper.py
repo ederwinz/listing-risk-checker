@@ -37,6 +37,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from dotenv import load_dotenv
 from sheets_sync import append_rows as sheets_append
+import supabase_sync
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -78,7 +79,10 @@ Rules for colorways:
 
 
 def load_existing() -> dict[tuple, dict]:
-    """Returns {(brand, product_line, colorway): {item_id, screenshot}} from existing CSV."""
+    """Returns {(brand, product_line, colorway): {item_id, screenshot}}. Tries Supabase first."""
+    sb = supabase_sync.load_existing()
+    if sb:
+        return sb
     if not VERIFIED_CSV.exists():
         return {}
     result = {}
@@ -92,6 +96,9 @@ def load_existing() -> dict[tuple, dict]:
 
 def next_id_num(prefix: str) -> int:
     """Returns the next integer to use for a given ID prefix."""
+    sb_num = supabase_sync.next_id_num(prefix)
+    if sb_num is not None:
+        return sb_num
     if not VERIFIED_CSV.exists():
         return 1
     pattern = re.compile(rf"^{re.escape(prefix)}-(\d+)$")
@@ -164,17 +171,23 @@ def extract_from_page(image_path: Path, client: anthropic.Anthropic) -> dict:
     return json.loads(response)
 
 
-def save_screenshot_as_reference(image_path: Path, item_id: str, brand: str, id_prefix: str) -> bool:
-    """Copy the page screenshot into Product Screenshots/ as the reference image."""
-    save_dir = SCREENSHOTS_DIR / brand.lower() / id_prefix
-    save_dir.mkdir(parents=True, exist_ok=True)
-    dest = save_dir / f"{item_id}.png"
+def save_screenshot_as_reference(image_path: Path, item_id: str, brand: str, id_prefix: str) -> str:
+    """
+    Upload the Playwright screenshot to Supabase Storage and copy it locally.
+    Returns the Supabase public URL, "Yes" (local-only), or "" on failure.
+    """
+    storage_path = f"{brand.lower()}/{id_prefix}/{item_id}.png"
+    url = supabase_sync.upload_image(image_path, storage_path)
+
+    # Also keep a local copy during transition
     try:
-        shutil.copy2(str(image_path), str(dest))
-        return True
-    except Exception as e:
-        print(f"    [img] {e}")
-        return False
+        save_dir = SCREENSHOTS_DIR / brand.lower() / id_prefix
+        save_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(image_path), str(save_dir / f"{item_id}.png"))
+    except Exception:
+        pass
+
+    return url or "Yes"
 
 
 def append_to_csv(rows: list[dict]):
@@ -229,7 +242,7 @@ def process_url(
             continue
 
         item_id = f"{id_prefix}-{seq:03d}"
-        img_ok = save_screenshot_as_reference(tmp_path, item_id, brand, id_prefix)
+        img_result = save_screenshot_as_reference(tmp_path, item_id, brand, id_prefix)
 
         row = {
             "Item ID": item_id,
@@ -245,11 +258,11 @@ def process_url(
             "Trust Level": "5",
             "Source Type": "Official Page",
             "Source URL": url,
-            "Screenshot": "Yes" if img_ok else "No",
+            "Screenshot": img_result,
             "Notes": f"Auto-scraped {datetime.now().strftime('%Y-%m-%d')}",
         }
         new_rows.append(row)
-        existing[key] = {"item_id": item_id, "screenshot": row["Screenshot"]}
+        existing[key] = {"item_id": item_id, "screenshot": img_result}
         seq += 1
         print(f"    + {item_id}  {colorway}")
 
@@ -308,6 +321,8 @@ def main():
         print(f"\n✓ Added {len(all_new)} new row(s) to {VERIFIED_CSV.name}")
         tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
         sheets_append(tab, all_new, CSV_COLUMNS)
+        for row in all_new:
+            supabase_sync.upsert_product(row)
     else:
         print("\nNo new rows added (all colorways already exist or extraction failed).")
 
