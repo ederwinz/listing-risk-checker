@@ -215,64 +215,85 @@ def screenshot_search_page(
 def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
     """
     Search the Rednote Mac app and screenshot results.
-    Requires Accessibility permission: System Settings → Privacy & Security →
-    Accessibility → enable Terminal (or whichever app runs this script).
+    Rednote is Electron-based — uses pyautogui for real CGEvent mouse clicks
+    and AppleScript targeted at process "discover" for keystrokes.
+    Requires:
+    - pyautogui: pip install pyautogui
+    - Accessibility permission for Terminal in System Settings → Privacy & Security
     """
     import subprocess as _sp
+    try:
+        import pyautogui as _pag
+        _pag.FAILSAFE = False
+    except ImportError:
+        print("    WARN: pyautogui not installed — run: pip install pyautogui")
+        return None
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-
-    # Already captured on a previous run — reuse
     if dest.exists() and dest.stat().st_size > 50_000:
         return dest
 
-    # Activate app and type search query
-    safe_query = query.replace('"', '\\"')
-    search_script = f"""
-    tell application "Rednote" to activate
-    delay 1.5
+    # Activate Rednote (app name is "rednote", System Events process is "discover")
+    # and get window bounds for click coordinates and screencapture
+    bounds_script = """
+    tell application "rednote" to activate
+    delay 2
     tell application "System Events"
-        tell process "Rednote"
-            keystroke "f" using {{command down}}
-            delay 0.8
-            keystroke "{safe_query}"
-            key code 36
+        tell process "discover"
+            set p to position of front window
+            set s to size of front window
+            return ((item 1 of p) as text) & "," & ((item 2 of p) as text) & "," & ((item 1 of s) as text) & "," & ((item 2 of s) as text)
         end tell
     end tell
     """
-    _sp.run(["osascript", "-e", search_script], capture_output=True)
-    time.sleep(3)
+    r = _sp.run(["osascript", "-e", bounds_script], capture_output=True, text=True)
+    try:
+        wx, wy, ww, wh = [int(v.strip()) for v in r.stdout.strip().split(",")]
+    except Exception:
+        wx, wy, ww, wh = 0, 0, 1200, 800
 
-    # Scroll down for pages beyond 1
-    if page > 1:
-        scroll_script = f"""
+    if page == 1:
+        # pbcopy handles Unicode/Chinese reliably
+        _sp.run(['pbcopy'], input=query.encode('utf-8'), capture_output=True)
+
+        # Click to open the search bar — wx+910 targets the search widget in the top-right,
+        # wy+58 is the vertical center of the search bar (verified empirically)
+        _pag.click(wx + 910, wy + 58)
+        time.sleep(2.5)
+
+        # Send keystrokes directly to the "discover" process — this bypasses the
+        # window focus problem where pyautogui keystrokes go to the terminal instead
+        keystroke_script = """
         tell application "System Events"
-            tell process "Rednote"
-                repeat {(page - 1) * 8} times
-                    key code 125
-                    delay 0.05
-                end repeat
+            tell process "discover"
+                keystroke "a" using {command down}
+                delay 0.5
+                keystroke "v" using {command down}
+                delay 0.8
+                key code 36
             end tell
         end tell
         """
-        _sp.run(["osascript", "-e", scroll_script], capture_output=True)
+        _sp.run(["osascript", "-e", keystroke_script], capture_output=True)
+        time.sleep(5)
+
+    else:
+        # Page 2+: re-activate, click content area, scroll down
+        _sp.run(["osascript", "-e", 'tell application "rednote" to activate'], capture_output=True)
+        time.sleep(1.5)
+        cx, cy = wx + ww // 2, wy + wh // 2
+        _pag.click(cx, cy)
+        time.sleep(0.5)
+        _pag.scroll(-15, cx, cy)
         time.sleep(2)
 
-    # Get window bounds and capture just the Rednote window
-    bounds_script = """
-    tell application "System Events"
-        tell process "Rednote"
-            get position of front window & size of front window
-        end tell
-    end tell
-    """
-    result = _sp.run(["osascript", "-e", bounds_script], capture_output=True, text=True)
-    try:
-        coords = [int(v.strip()) for v in result.stdout.strip().split(",")]
-        x, y, w, h = coords
-        _sp.run(["screencapture", "-R", f"{x},{y},{w},{h}", "-o", str(dest)])
-    except Exception:
-        _sp.run(["screencapture", "-o", str(dest)])  # fallback: full screen
+    # Re-activate so screencapture gets Rednote, not whatever stole focus
+    _sp.run(["osascript", "-e", 'tell application "rednote" to activate'], capture_output=True)
+    time.sleep(0.5)
+    if ww > 0:
+        _sp.run(["screencapture", "-R", f"{wx},{wy},{ww},{wh}", "-o", str(dest)])
+    else:
+        _sp.run(["screencapture", "-o", str(dest)])
 
     if dest.exists() and dest.stat().st_size > 50_000:
         return dest
@@ -551,8 +572,16 @@ def main():
 
     print(f"\n=== Brand Scout — {run_date} ===")
     print(f"Running {len(queries)} query/queries, {args.pages} page(s) each")
-    if not args.user_data_dir:
-        print("TIP: pass --user-data-dir for better results (avoids login walls)\n")
+    if not args.user_data_dir and not args.use_app:
+        print("TIP: pass --use-app (Rednote Mac app) or --user-data-dir for best results\n")
+
+    if args.dry_run:
+        print("\n[DRY RUN] Queries that would execute:")
+        for q in queries:
+            for page_num in range(1, args.pages + 1):
+                print(f"  [{q['platform']}] p{page_num}: {q['query']}")
+        print("\n[DRY RUN] No screenshots taken, no API calls made.")
+        return
 
     known_brands = load_known_brands()
     raw_results: list[dict] = []
