@@ -1250,7 +1250,7 @@ def scrape_collection(
 
         if key in existing:
             info = existing[key]
-            has_screenshot = info["screenshot"] not in ("No", "", None)
+            has_screenshot = (info["screenshot"] or "").startswith("https://")
             if not has_screenshot and data.get("image_url"):
                 img_result = save_product_image(
                     info["item_id"], brand, config["id_prefix"], data["image_url"]

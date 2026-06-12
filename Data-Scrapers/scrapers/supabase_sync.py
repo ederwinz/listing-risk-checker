@@ -155,6 +155,57 @@ def update_screenshot_url(item_id: str, url: str) -> None:
         print(f"  [Supabase] update_screenshot_url failed ({e})")
 
 
+def load_all_verified() -> list[dict]:
+    """Returns all verified_products rows with all columns. Returns [] if Supabase not configured."""
+    client = _get_client()
+    if not client:
+        return []
+    try:
+        all_rows: list[dict] = []
+        offset = 0
+        while True:
+            resp = (
+                client.table("verified_products")
+                .select("*")
+                .range(offset, offset + 999)
+                .execute()
+            )
+            if not resp.data:
+                break
+            all_rows.extend(resp.data)
+            if len(resp.data) < 1000:
+                break
+            offset += 1000
+        return all_rows
+    except Exception as e:
+        print(f"  [Supabase] load_all_verified failed ({e})")
+        return []
+
+
+def load_unmatched_listings() -> list[dict]:
+    """Returns test_listings rows that have no comparison result yet (expected_matchid empty/null)."""
+    client = _get_client()
+    if not client:
+        return []
+    try:
+        resp = client.table("test_listings").select("*").execute()
+        return [r for r in (resp.data or []) if not r.get("expected_matchid")]
+    except Exception as e:
+        print(f"  [Supabase] load_unmatched_listings failed ({e})")
+        return []
+
+
+def update_listing_match(testing_id: str, match_data: dict) -> None:
+    """Patch comparison result fields onto a test_listings row."""
+    client = _get_client()
+    if not client:
+        return
+    try:
+        client.table("test_listings").update(match_data).eq("testing_id", testing_id).execute()
+    except Exception as e:
+        print(f"  [Supabase] update_listing_match failed ({e})")
+
+
 def upload_image(source, storage_path: str) -> str | None:
     """
     Upload an image to Supabase Storage and return its public URL.
