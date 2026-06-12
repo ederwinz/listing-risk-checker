@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -212,9 +213,16 @@ def screenshot_search_page(
     return dest
 
 
-def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
+def screenshot_rednote_app(query: str, page: int, dest: Path, *, is_first_query: bool = True, force: bool = False) -> Path | None:
     """
     Search the Rednote Mac app and screenshot results.
+
+    Flow:
+      First query, page 1  — click top-right search widget on explore page (wx+910, wy+58)
+      Any page 2           — scroll down for more results
+      Subsequent page 1    — scroll all the way up, then click the full-width search bar
+                             at the top of the results page (wx+500, wy+38)
+
     Rednote is Electron-based — uses pyautogui for real CGEvent mouse clicks
     and AppleScript targeted at process "discover" for keystrokes.
     Requires:
@@ -230,7 +238,7 @@ def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
         return None
 
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if dest.exists() and dest.stat().st_size > 50_000:
+    if not force and dest.exists() and dest.stat().st_size > 50_000:
         return dest
 
     # Activate Rednote (app name is "rednote", System Events process is "discover")
@@ -252,13 +260,29 @@ def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
     except Exception:
         wx, wy, ww, wh = 0, 0, 1200, 800
 
+    cx, cy = wx + ww // 2, wy + wh // 2
+
     if page == 1:
-        # pbcopy handles Unicode/Chinese reliably
+        if not is_first_query:
+            # App is on the results page from the previous search, likely scrolled down.
+            # Scroll all the way back up so the sticky search bar reappears at the top.
+            _pag.click(cx, cy)
+            time.sleep(0.3)
+            _pag.scroll(50, cx, wy + 300)  # 50 ticks — always reaches the top
+            time.sleep(1.5)
+
+        # Set clipboard — pbcopy handles Unicode/Chinese reliably
         _sp.run(['pbcopy'], input=query.encode('utf-8'), capture_output=True)
 
-        # Click to open the search bar — wx+910 targets the search widget in the top-right,
-        # wy+58 is the vertical center of the search bar (verified empirically)
-        _pag.click(wx + 910, wy + 58)
+        if is_first_query:
+            # Explore page: search widget sits ~114px from the right edge of the window.
+            # Using ww-114 keeps it correct regardless of window width.
+            _pag.click(wx + ww - 114, wy + 58)
+        else:
+            # Results page: full-width search bar — click the horizontal center.
+            # wy+53 empirically verified y for results view.
+            _pag.click(wx + ww // 2, wy + 53)
+
         time.sleep(2.5)
 
         # Send keystrokes directly to the "discover" process — this bypasses the
@@ -278,13 +302,12 @@ def screenshot_rednote_app(query: str, page: int, dest: Path) -> Path | None:
         time.sleep(5)
 
     else:
-        # Page 2+: re-activate, click content area, scroll down
+        # Page 2+: re-activate, click content area, scroll down for more results
         _sp.run(["osascript", "-e", 'tell application "rednote" to activate'], capture_output=True)
         time.sleep(1.5)
-        cx, cy = wx + ww // 2, wy + wh // 2
         _pag.click(cx, cy)
         time.sleep(0.5)
-        _pag.scroll(-15, cx, cy)
+        _pag.scroll(-40, cx, cy)
         time.sleep(2)
 
     # Re-activate so screencapture gets Rednote, not whatever stole focus
@@ -542,6 +565,8 @@ def main():
                         help="Take screenshots only, skip Claude extraction (run VPN-off first, then re-run VPN-on)")
     parser.add_argument("--auto-scrape", action="store_true",
                         help="Automatically scrape brands found with open Shopify into Verified_Products")
+    parser.add_argument("--force", action="store_true",
+                        help="Re-take screenshots even if they already exist for today")
     args = parser.parse_args()
 
     if not args.all and not args.category and not args.platform:
@@ -587,6 +612,10 @@ def main():
     raw_results: list[dict] = []
     screenshots_taken = 0
     screenshots_skipped = 0
+    first_rednote_search = True  # tracks whether we're starting fresh from the explore page
+
+    # Phase 1: Take all screenshots sequentially (app automation must be serial)
+    screenshot_queue: list[tuple[Path, str, str, str]] = []  # (path, platform, category, query)
 
     for q in queries:
         platform = q["platform"]
@@ -603,39 +632,62 @@ def main():
 
             if args.use_app and platform == "Rednote":
                 dest = output_dir / f"{platform}_{slug}_p{page_num}.png"
-                img_path = screenshot_rednote_app(query, page_num, dest)
+                already_exists = dest.exists() and dest.stat().st_size > 50_000
+                is_first = first_rednote_search and page_num == 1
+                img_path = screenshot_rednote_app(query, page_num, dest, is_first_query=is_first, force=args.force)
+                if page_num == 1 and (not already_exists or args.force):
+                    first_rednote_search = False
             else:
+                dest = output_dir / f"{platform}_{slug}_p{page_num}.png"
+                already_exists = dest.exists() and dest.stat().st_size > 50_000
                 img_path = screenshot_search_page(
                     url, platform, slug, page_num, args.user_data_dir, output_dir
                 )
 
             if img_path is None:
                 screenshots_skipped += 1
+                print(f"    p{page_num}: skipped")
                 continue
 
             screenshots_taken += 1
+            cached = already_exists and not args.force
+            print(f"    p{page_num}: {'cached' if cached else 'taken'}")
 
-            if args.screenshots_only:
-                print(f"    p{page_num}: screenshot saved")
-                continue
+            if not args.screenshots_only:
+                screenshot_queue.append((img_path, platform, category, query))
 
+    print(f"\n  Screenshots: {screenshots_taken} taken, {screenshots_skipped} skipped")
+
+    if args.screenshots_only:
+        print(f"\nScreenshots saved to {output_dir}")
+        print("Run without --screenshots-only to extract brands from them.")
+        return
+
+    # Phase 2: Extract brands in parallel (Claude API calls are independent)
+    if screenshot_queue:
+        print(f"  Extracting brands from {len(screenshot_queue)} screenshots in parallel...")
+
+        def _extract(job):
+            img_path, platform, category, query = job
             brands = extract_brands_from_screenshot(img_path, platform, category, client)
-
             for b in brands:
                 b["platform"] = platform
                 b["category"] = category
                 b["query"] = query
-            raw_results.extend(brands)
+            return brands
 
-            found_names = [b["brand"] for b in brands]
-            if found_names:
-                print(f"    p{page_num}: {', '.join(found_names[:8])}{'...' if len(found_names) > 8 else ''}")
-            else:
-                print(f"    p{page_num}: (no brands found)")
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(_extract, job): job for job in screenshot_queue}
+            for future in as_completed(futures):
+                brands = future.result()
+                raw_results.extend(brands)
+                found_names = [b["brand"] for b in brands]
+                img_path = futures[future][0]
+                if found_names:
+                    print(f"    {img_path.name}: {', '.join(found_names[:8])}{'...' if len(found_names) > 8 else ''}")
+                else:
+                    print(f"    {img_path.name}: (no brands found)")
 
-            time.sleep(2)
-
-    print(f"\n  Screenshots: {screenshots_taken} taken, {screenshots_skipped} skipped")
     print(f"  Raw brand mentions: {len(raw_results)}")
 
     if not raw_results:

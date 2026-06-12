@@ -621,6 +621,64 @@ BRANDS = [
             },
         ],
     },
+    # ── Oner Active ─────────────────────────────────────────────────────────────
+    {
+        "brand": "Oner Active",
+        "store_domain": "oner.com",
+        "collections": [
+            {
+                "url": "https://oner-us.myshopify.com/collections/shop-classic-seamless/products.json",
+                "product_line": "Classic Seamless", "model_name": "Classic Seamless", "id_prefix": "oner-classicseamless", "variant_strategy": "by_title_pipe",
+            },
+            {
+                "url": "https://oner-us.myshopify.com/collections/softmotion/products.json",
+                "product_line": "SoftMotion", "model_name": "SoftMotion", "id_prefix": "oner-softmotion", "variant_strategy": "by_title_pipe",
+            },
+            {
+                "url": "https://oner-us.myshopify.com/collections/shop-effortless/products.json",
+                "product_line": "Effortless", "model_name": "Effortless", "id_prefix": "oner-effortless", "variant_strategy": "by_title_pipe",
+            },
+            {
+                "url": "https://oner-us.myshopify.com/collections/mellow/products.json",
+                "product_line": "Mellow", "model_name": "Mellow", "id_prefix": "oner-mellow", "variant_strategy": "by_title_pipe",
+            },
+            {
+                "url": "https://oner-us.myshopify.com/collections/accentuate/products.json",
+                "product_line": "Accentuate", "model_name": "Accentuate", "id_prefix": "oner-accentuate", "variant_strategy": "by_title_pipe",
+            },
+            {
+                "url": "https://oner-us.myshopify.com/collections/airmove/products.json",
+                "product_line": "Airmove", "model_name": "Airmove", "id_prefix": "oner-airmove", "variant_strategy": "by_title_pipe",
+            },
+        ],
+    },
+    # ── Alo Yoga ────────────────────────────────────────────────────────────────
+    {
+        "brand": "Alo Yoga",
+        "store_domain": "aloyoga.com",
+        "collections": [
+            {
+                "url": "https://alo-yoga.myshopify.com/collections/airlift-leggings/products.json",
+                "product_line": "Airlift Leggings", "model_name": "Airlift", "id_prefix": "alo-airlift", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alo-yoga.myshopify.com/collections/airbrush-leggings/products.json",
+                "product_line": "Airbrush Leggings", "model_name": "Airbrush", "id_prefix": "alo-airbrush", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alo-yoga.myshopify.com/collections/alo-softsculpt-leggings/products.json",
+                "product_line": "SoftSculpt Leggings", "model_name": "SoftSculpt", "id_prefix": "alo-softsculpt", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alo-yoga.myshopify.com/collections/alosoft-leggings/products.json",
+                "product_line": "Alosoft Leggings", "model_name": "Alosoft", "id_prefix": "alo-alosoft", "variant_strategy": "by_title_suffix",
+            },
+            {
+                "url": "https://alo-yoga.myshopify.com/collections/conquer/products.json",
+                "product_line": "Conquer", "model_name": "Conquer", "id_prefix": "alo-conquer", "variant_strategy": "by_title_suffix",
+            },
+        ],
+    },
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; brand-reference-scraper/2.0)"}
@@ -1090,6 +1148,49 @@ def group_products_by_title_suffix(products: list[dict], store_domain: str) -> d
     return colorways
 
 
+# ── Strategy: by_title_pipe (Oner Active) ──────────────────────────────────────
+
+def group_products_by_title_pipe(products: list[dict], store_domain: str) -> dict[str, dict]:
+    """
+    Returns {color: data} by extracting color from after the last ' | ' in the product title.
+    Used for Oner-style products: 'SoftMotion™ Leggings | Black' → 'Black'.
+    """
+    colorways: dict[str, dict] = {}
+
+    for product in products:
+        title = product.get("title", "")
+        color = title.split(" | ")[-1].strip() if " | " in title else "Original"
+
+        opts = product.get("options", [])
+        size_key = option_key_for(opts, ["size", "capacity", "volume"])
+        sizes: list[str] = []
+        for v in product.get("variants", []):
+            if size_key:
+                sz = (v.get(size_key) or "").strip()
+                if sz and sz not in ("Default Title",) and sz not in sizes:
+                    sizes.append(sz)
+
+        variants = product.get("variants", [])
+        price, sale_price = "$0", ""
+        if variants:
+            v = variants[0]
+            current = v.get("price") or "0"
+            compare = v.get("compare_at_price")
+            if compare and float(compare) > float(current):
+                price, sale_price = f"${compare}", f"${current}"
+            else:
+                price = f"${current}"
+
+        image_url = product["images"][0]["src"] if product.get("images") else ""
+        product_url = f"https://{store_domain}/products/{product['handle']}"
+
+        if color not in colorways:
+            colorways[color] = {"sizes": sizes, "price": price, "sale_price": sale_price,
+                                 "image_url": image_url, "product_url": product_url}
+
+    return colorways
+
+
 # ── Image download ─────────────────────────────────────────────────────────────
 
 def save_product_image(item_id: str, brand: str, id_prefix: str, image_url: str) -> str:
@@ -1135,6 +1236,8 @@ def scrape_collection(
         colorways = group_products_by_title_prefix(products, config["model_name"], store_domain)
     elif strategy == "by_title_parens":
         colorways = group_products_by_title_parens(products, store_domain)
+    elif strategy == "by_title_pipe":
+        colorways = group_products_by_title_pipe(products, store_domain)
     else:
         title_filter = config.get("title_contains", "")
         colorways = group_variants_by_colorway(products, title_filter, store_domain)
