@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Counterpart — design system
+   Fresh-natural green · fintech clarity · serif + sans
+   Tokens on :root; flip to dark with <html data-theme="dark">.
+   Fonts come from next/font (--font-head / --font-body / --font-mono
+   are set on <html> in layout.tsx).
+   ============================================================ */
+
+:root {
+  /* Explicitly light — prevents system dark mode and Dark Reader from inverting colors */
+  color-scheme: light;
+
+  --font-head: 'Source Serif 4', Georgia, serif;
+  --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  /* brand */
+  --brand: #12805A;
+  --brand-2: #0a5c42;
+  --on-brand: #ffffff;
+
+  /* neutrals — light */
+  --bg: #F1F4EF;
+  --surface: #FFFFFF;
+  --surface-2: #F6F8F3;
+  --ink: #14201B;
+  --muted: #5E6B64;
+  --faint: #98A39C;
+  --line: #E5E9E2;
+  --line-2: #EEF1EB;
+
+  /* risk semantics */
+  --low: #15875B;  --low-bg: #E6F3EC;  --low-line:#BCE0CC;
+  --med: #B0791C;  --med-bg: #FAF1DC;  --med-line:#EAD8AE;
+  --high:#CB453A;  --high-bg:#FBE9E5;  --high-line:#EFC9C2;
+  --gray:#6A766F;  --gray-bg:#EDF0EC;  --gray-line:#D9DFD8;
+
+  /* radius */
+  --r: 20px;
+  --r-sm: 13px;
+  --r-xs: 9px;
+  --r-lg: 26px;
+
+  --shadow: 0 1px 2px rgba(20,40,30,.04), 0 6px 22px rgba(20,40,30,.06);
+  --shadow-sm: 0 1px 2px rgba(20,40,30,.05);
+}
+
+:root[data-theme="dark"] {
+  --brand: #34B07E;
+  --brand-2: #2a8d65;
+  --on-brand: #06140d;
+  --bg: #0E1512;
+  --surface: #16201B;
+  --surface-2: #1B2620;
+  --ink: #EAF0EC;
+  --muted: #9DAaA2;
+  --faint: #6E7A73;
+  --line: #243029;
+  --line-2: #1F2A24;
+  --low: #45C088;  --low-bg: #13271D;  --low-line:#244E38;
+  --med: #DBA53C;  --med-bg: #2A2110;  --med-line:#574420;
+  --high:#EF6B5E;  --high-bg:#2B1714;  --high-line:#5A2C26;
+  --gray:#9AA69F;  --gray-bg:#1E2823;  --gray-line:#2C382F;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 30px rgba(0,0,0,.4);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { background: var(--bg); }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- app shell (mobile-first, centered) ---- */
+.cp-app {
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.cp-pad { flex: 1; display: flex; flex-direction: column; padding: 28px 20px 36px; }
+
+/* ---- top bar ---- */
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+.brandmark { display: flex; align-items: center; gap: 9px; }
+.brandmark .glyph {
+  width: 28px; height: 28px; border-radius: 9px; background: var(--brand);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.brandmark .wordmark {
+  font-family: var(--font-head); font-weight: 600; font-size: 18px;
+  letter-spacing: -.01em; color: var(--ink);
+}
+.iconbtn {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--surface);
+  border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+  color: var(--muted); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+
+/* ---- type ---- */
+.eyebrow {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--brand);
+}
+.display {
+  font-family: var(--font-head); font-weight: 600; font-size: 33px;
+  line-height: 1.04; letter-spacing: -.015em; color: var(--ink);
+  text-wrap: balance; margin: 0;
+}
+.h2 {
+  font-family: var(--font-head); font-weight: 600; font-size: 22px;
+  line-height: 1.1; letter-spacing: -.01em; margin: 0;
+}
+.lede { font-size: 15px; line-height: 1.5; color: var(--muted); text-wrap: pretty; margin: 0; }
+.label {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+}
+.mono { font-family: var(--font-mono); }
+
+/* ---- buttons ---- */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; border: none; border-radius: calc(var(--r) - 2px);
+  padding: 17px 20px; font-family: var(--font-body); font-weight: 700;
+  font-size: 16px; letter-spacing: -.01em; cursor: pointer;
+}
+.btn-primary {
+  background: var(--brand); color: var(--on-brand);
+  box-shadow: 0 6px 18px -6px color-mix(in oklab, var(--brand) 70%, transparent);
+}
+.btn-ghost { background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+
+/* ---- card ---- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); }
+
+/* ---- risk badge ---- */
+.badge {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 9px;
+  border-radius: 999px; font-size: 12.5px; font-weight: 700; letter-spacing: -.005em; border: 1px solid;
+}
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+.badge.low   { background: var(--low-bg);  color: var(--low);  border-color: var(--low-line); }
+.badge.low .dot   { background: var(--low); }
+.badge.medium{ background: var(--med-bg);  color: var(--med);  border-color: var(--med-line); }
+.badge.medium .dot{ background: var(--med); }
+.badge.high  { background: var(--high-bg); color: var(--high); border-color: var(--high-line); }
+.badge.high .dot  { background: var(--high); }
+.badge.unverifiable { background: var(--gray-bg); color: var(--gray); border-color: var(--gray-line); }
+.badge.unverifiable .dot { background: var(--gray); }
+
+/* ---- chips ---- */
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  font-size: 12.5px; font-weight: 600; color: var(--muted); background: var(--surface);
+  border: 1px solid var(--line); padding: 6px 11px; border-radius: 999px;
+}
+
+/* ---- result list card ---- */
+.rcard { display: flex; align-items: center; gap: 13px; padding: 13px; }
+.rcard .pic {
+  width: 56px; height: 56px; border-radius: var(--r-xs); object-fit: cover;
+  background: var(--surface-2); border: 1px solid var(--line); flex-shrink: 0;
+}
+.rcard .meta { flex: 1; min-width: 0; }
+.rcard .brand { font-weight: 700; font-size: 15px; letter-spacing:-.01em; }
+.rcard .sub {
+  font-size: 12.5px; color: var(--muted); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+}
+.rcard .chev { color: var(--faint); flex-shrink: 0; }
+
+/* ---- shimmer / spinner ---- */
+.shimmer {
+  background: linear-gradient(100deg, var(--surface-2) 30%,
+    color-mix(in oklab, var(--surface-2) 60%, var(--bg)) 50%, var(--surface-2) 70%);
+  background-size: 200% 100%; animation: cp-sh 1.3s ease-in-out infinite; border-radius: 6px;
+}
+@keyframes cp-sh { 0%{background-position:120% 0} 100%{background-position:-20% 0} }
+.spin {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line);
+  border-top-color: var(--brand); animation: cp-rot .7s linear infinite;
+}
+@keyframes cp-rot { to { transform: rotate(360deg); } }
+
+/* ---- verdict banner ---- */
+.verdict { border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.verdict .row { display: flex; align-items: center; gap: 14px; }
+.verdict .vtitle {
+  font-family: var(--font-head); font-weight: 600; font-size: 21px;
+  line-height: 1.08; letter-spacing: -.01em;
+}
+.verdict .vsub { font-size: 13px; margin-top: 3px; line-height: 1.4; }
+.verdict .ico { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.verdict.low   { background: var(--low-bg);  color: var(--low);  border:1px solid var(--low-line); }
+.verdict.medium{ background: var(--med-bg);  color: var(--med);  border:1px solid var(--med-line); }
+.verdict.high  { background: var(--high-bg); color: var(--high); border:1px solid var(--high-line); }
+.verdict.unverifiable { background: var(--gray-bg); color: var(--gray); border:1px solid var(--gray-line); }
+.verdict .vtitle, .verdict .vsub { color: var(--ink); }
+.verdict.low .ico   { background: var(--low);  color:#fff; }
+.verdict.medium .ico{ background: var(--med);  color:#fff; }
+.verdict.high .ico  { background: var(--high); color:#fff; }
+.verdict.unverifiable .ico { background: var(--gray); color:#fff; }
+
+/* optional verdict intensity — set <html data-verdict="bold|loud"> */
+:root[data-verdict="loud"] .verdict.low   { background: var(--low);  border-color: var(--low); }
+:root[data-verdict="loud"] .verdict.medium{ background: var(--med);  border-color: var(--med); }
+:root[data-verdict="loud"] .verdict.high  { background: var(--high); border-color: var(--high); }
+:root[data-verdict="loud"] .verdict .vtitle,
+:root[data-verdict="loud"] .verdict .vsub { color: #fff; }
+:root[data-verdict="loud"] .verdict .ico { background: rgba(255,255,255,.2); color:#fff; }
+
+/* ---- field breakdown ---- */
+.fields { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.field { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line-2); }
+.field:last-child { border-bottom: none; }
+.field .fico {
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 13px; font-weight: 800;
+}
+.field .fico.ok   { background: var(--low-bg);  color: var(--low); }
+.field .fico.warn { background: var(--med-bg);  color: var(--med); }
+.field .fico.fail { background: var(--high-bg); color: var(--high); }
+.field .fico.skip { background: var(--gray-bg); color: var(--faint); }
+.field .fbody { flex: 1; min-width: 0; }
+.field .fval { font-weight: 700; font-size: 14.5px; letter-spacing: -.01em; margin-top: 2px; color: var(--ink); }
+.field .fval .none { font-weight: 500; font-style: italic; color: var(--faint); }
+.field .fresult { font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+.field .fresult.ok   { color: var(--low); }
+.field .fresult.warn { color: var(--med); }
+.field .fresult.fail { color: var(--high); }
+.field .fresult.skip { color: var(--faint); }
+.field .fdetail { font-size: 11.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; word-break: break-word; }
+
+/* ---- official reference ---- */
+.ref { display: flex; gap: 13px; align-items: center; }
+.ref .pic {
+  width: 78px; height: 78px; border-radius: var(--r-sm); object-fit: contain;
+  background: #fff; border: 1px solid var(--line); flex-shrink: 0;
+}
+.link {
+  color: var(--brand); font-weight: 600; font-size: 13px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* ---- summary tally ---- */
+.tally { display: flex; gap: 8px; }
+.tally .t { flex: 1; border-radius: var(--r-sm); padding: 11px 12px; border: 1px solid var(--line); background: var(--surface); }
+.tally .t .n { font-family: var(--font-head); font-weight:600; font-size: 22px; line-height:1; }
+.tally .t .k { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight:600; }
+.tally .t.low .n   { color: var(--low); }
+.tally .t.medium .n{ color: var(--med); }
+.tally .t.high .n  { color: var(--high); }
+
+/* ---- misc ---- */
+.note { font-size: 11.5px; line-height: 1.5; color: var(--faint); }
+.spacer { flex: 1; }
+.stack { display: flex; flex-direction: column; }
+.progress { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.progress > i { display:block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .5s; }
+.platform { display:inline-flex; align-items:center; gap:5px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.platform .pdot { width:6px; height:6px; border-radius:50%; background: var(--brand); }
+.peek-pic {
+  width: 48px; height: 48px; border-radius: var(--r-xs); flex-shrink: 0;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(120% 120% at 30% 20%, color-mix(in oklab, var(--brand) 22%, var(--surface-2)), var(--surface-2));
+}

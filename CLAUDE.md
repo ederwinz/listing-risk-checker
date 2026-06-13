@@ -216,6 +216,59 @@ Official product images target `https://cdn.shopify.com/...` URLs stored directl
 
 Always run this after `official_scraper.py` to push new rows to Supabase. The scraper only writes to CSV and Google Sheets; Supabase sync is a separate step.
 
+## Frontend (Web App)
+
+The user-facing app lives in `frontend/` — a Next.js 16 (App Router) + TypeScript + Tailwind CSS v4 project.
+
+### Running the frontend
+
+```bash
+cd frontend
+npm install                          # first time only
+npm run dev                          # dev server at http://localhost:3000
+npm run build                        # production build check
+./node_modules/.bin/tsc --noEmit     # type check — do NOT use `npx tsc` (installs wrong package)
+```
+
+### Environment
+
+`frontend/.env.local` (gitignored, copy from `.env.local.example`):
+```
+ANTHROPIC_API_KEY=...          # from Data-Scrapers/.env
+SUPABASE_URL=...               # from Data-Scrapers/.env
+SUPABASE_SERVICE_KEY=...       # service role key (server-only, never sent to browser)
+```
+
+All three vars are server-only (no `NEXT_PUBLIC_` prefix) — only used inside the API route.
+
+### Architecture
+
+One API route handles the full pipeline: `app/api/analyze/route.ts`
+1. Receives uploaded image (multipart form, field: `"image"`)
+2. Calls `lib/extraction.ts` — Claude Haiku vision with same `EXTRACTION_PROMPT` as `listing_extractor.py`
+3. Calls `lib/supabase.ts` — loads all `verified_products` (cached 1 hour via `unstable_cache`)
+4. Calls `lib/comparison.ts` — TypeScript port of `comparison_engine.py` (same match cascade, same thresholds)
+5. Returns `Report` JSON
+
+`lib/comparison.ts` is the authoritative TypeScript equivalent of `comparison_engine.py`. If you change matching logic in one, mirror it in the other. Key equivalences:
+- `difflib.SequenceMatcher` → `fastest-levenshtein` distance ratio
+- `FUZZY_THRESHOLD = 0.75` — same in both
+- Match types: EXACT → FUZZY_COLORWAY → COLORWAY_NOT_FOUND → PRODUCT_LINE_NOT_FOUND → BRAND_NOT_FOUND
+
+**Design system** — `app/globals.css` contains all visual tokens as plain CSS custom properties (no separate Tailwind config). Starts with `@import "tailwindcss"` (Tailwind v4 syntax). All component styles (`.card`, `.verdict`, `.badge`, `.btn`, `.fields`, etc.) are defined there. Dark mode tokens live under `:root[data-theme="dark"]` — the page is light by default; add `data-theme="dark"` to `<html>` to activate. `color-scheme: light` is set on `:root` to prevent macOS dark mode and browser extensions (e.g. Dark Reader) from overriding the light palette.
+
+**Fonts** — three Google fonts loaded via `next/font/google` in `layout.tsx`, exposed as CSS variables: `--font-head` (Source Serif 4), `--font-body` (Hanken Grotesk), `--font-mono` (Geist Mono).
+
+**Components** — `components/` contains: `BrandMark`, `ConfidenceRing`, `FieldRow`, `ReportCard`, `ResultsList`, `RiskBadge`, `RiskReport`, `UploadButton`, `icons` (SVG icon set).
+
+### User flow
+
+Home page → tap "Check a listing" → multi-select screenshots from gallery → results screen shows N cards immediately (all pending) → parallel fetch calls to `/api/analyze` fill each card as responses arrive. No login, no history, stateless per-session.
+
+### Types
+
+All shared TypeScript types are in `types/report.ts`: `Report`, `RiskLevel`, `MatchType`, `Extracted`, `VerifiedProduct`, `ResultSlot`.
+
 ## Important Constraints
 
 - **Never say "fake"** — output must use language like "no official match found" or "claim could not be verified." This is a deliberate legal/positioning decision.

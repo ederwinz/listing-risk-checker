@@ -1,6 +1,7 @@
 # Credentials — never commit these
 Data-Scrapers/.env
 Data-Scrapers/google-credentials.json
+frontend/.env.local
 
 # Working directories
 Data-Scrapers/inbox/
