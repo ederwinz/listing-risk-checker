@@ -811,13 +811,10 @@ def scrape_brand_dynamic(brand_name: str, shopify_handle: str) -> int:
         print(f"\n✓ Added {len(all_rows)} new row(s) for {brand_name}")
         tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
         sheets_append(tab, all_rows, CSV_COLUMNS)
-        for row in all_rows:
-            supabase_sync.upsert_product(row)
 
     if updated_screenshots:
         rewrite_csv_with_screenshot_updates(updated_screenshots)
-        for iid, url in updated_screenshots.items():
-            supabase_sync.update_screenshot_url(iid, url)
+        print(f"  Backfilled {len(updated_screenshots)} screenshot URL(s) — run migrate_to_supabase.py to sync.")
 
     return len(all_rows)
 
@@ -1250,7 +1247,7 @@ def scrape_collection(
 
         if key in existing:
             info = existing[key]
-            has_screenshot = (info["screenshot"] or "").startswith("https://")
+            has_screenshot = (info["screenshot"] or "").startswith("https://cdn.shopify.com/")
             if not has_screenshot and data.get("image_url"):
                 img_result = save_product_image(
                     info["item_id"], brand, config["id_prefix"], data["image_url"]
@@ -1372,8 +1369,6 @@ def main():
         print(f"\n✓ Added {len(all_new)} new row(s) to {VERIFIED_CSV.name}")
         tab = os.environ.get("VERIFIED_PRODUCTS_TAB", "Verified_Products")
         sheets_append(tab, all_new, CSV_COLUMNS)
-        for row in all_new:
-            supabase_sync.upsert_product(row)
 
     if updated_screenshots:
         rewrite_csv_with_screenshot_updates(updated_screenshots)

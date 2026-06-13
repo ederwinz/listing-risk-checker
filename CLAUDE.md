@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the data pipeline for a **listing risk checker** — an app that helps buyers in China verify whether overseas products sold on platforms like Rednote, Taobao, and Xianyu match official brand references. The output is a mismatch risk score, not a "fake/real" verdict (for legal reasons). The database currently covers Owala, Rhode, e.l.f. Cosmetics, YoungLA, Gymshark, Alphalete, NVGTN, Gymreapers, Rhone, Buff Bunny, Popflex, and Summer Fridays (~3,488 reference rows).
+This is the data pipeline for a **listing risk checker** — an app that helps buyers in China verify whether overseas products sold on platforms like Rednote, Taobao, and Xianyu match official brand references. The output is a mismatch risk score, not a "fake/real" verdict (for legal reasons).
 
 The product is positioned as an **official-reference mismatch checker**, not an "AI fake detector."
 
-The database currently covers Owala, Rhode, e.l.f. Cosmetics, YoungLA, Gymshark, Alphalete, NVGTN, Gymreapers, Rhone, Buff Bunny, Popflex, Summer Fridays, Alo Yoga, and Oner Active (~4,928 reference rows).
+The database covers Owala, Rhode, e.l.f. Cosmetics, YoungLA, Gymshark, Alphalete, NVGTN, Gymreapers, Rhone, Buff Bunny, Popflex, Summer Fridays, Alo Yoga, and Oner Active (~10,000+ reference rows).
 
 ## Running the Scrapers
 
@@ -42,6 +42,18 @@ python scrapers/brand_scout.py --category fitness --platform Rednote
 #   --auto-scrape        Auto-scrape any newly discovered open-Shopify brands into Verified_Products
 #   --dry-run            Print what would run without doing it
 python scrapers/brand_scout.py --category fitness --platform Rednote --dry-run
+
+# Watch inbox/ and auto-compare any new screenshot (recommended — leave running in a terminal)
+python scrapers/comparison_engine.py --watch
+
+# Compare a single marketplace screenshot against official reference data (extract + compare in one shot)
+python scrapers/comparison_engine.py --screenshot inbox/photo.jpg
+
+# Compare an already-extracted test listing by ID
+python scrapers/comparison_engine.py --testing-id XHS-001
+
+# Batch-compare all test_listings rows that don't yet have a match result
+python scrapers/comparison_engine.py --all
 
 # Extract listings from screenshots dropped in inbox/
 python scrapers/listing_extractor.py --platform Rednote
@@ -96,16 +108,19 @@ BRAND_CANDIDATES_TAB=Brand_Candidates   # optional, used by brand_scout.py
 ### Data Flow
 
 ```
-Official sources (12 brands via Shopify JSON API — see BRANDS list in official_scraper.py)
+Official sources (14 brands via Shopify JSON API — see BRANDS list in official_scraper.py)
     → official_scraper.py  [--brand <Name>]
-    → Supabase: verified_products table  (primary; screenshot_url stores Shopify CDN URL directly)
-    → Verified_Products.csv  (local backup, kept in sync)
-    → Google Sheets "Verified_Products" tab  (human-readable view)
+    → Verified_Products.csv  (primary local store; written immediately)
+    → Google Sheets "Verified_Products" tab  (appended immediately)
+    → run scripts/migrate_to_supabase.py after scraping to bulk-sync new rows to Supabase
+    (screenshot URL backfills for existing rows are pushed to Supabase directly by the scraper)
 
 Chinese marketplace screenshots / URLs
     → listing_extractor.py (Claude Haiku vision)
     → Supabase: test_listings table  (primary)
     → Test_Listings.csv + Google Sheets "Test_Listings" tab
+    → comparison_engine.py  (matches test_listings rows against verified_products)
+    → risk_level, expected_matchid, mismatch_reasons written back to test_listings
 ```
 
 ### Two Databases
@@ -119,7 +134,7 @@ Chinese marketplace screenshots / URLs
 - `Sale Price`: current discounted price, blank if no discount
 - `Sizes Available`: bare numbers for Owala (e.g. `24, 32, 40`); descriptive labels for Rhode skincare (e.g. `big (4.2 oz), little (1.7 oz)`)
 - `Regions`: intentionally left blank for all rows (reserved for future use)
-- `Screenshot`: Shopify CDN URL for new rows (stable content-addressed URL, no download needed); legacy rows may have `"Yes"`/`"No"`. `"No"` and blank rows are auto-retried on the next scraper run
+- `Screenshot`: target format is `https://cdn.shopify.com/...` (stable content-addressed URL, no download needed). Legacy rows may have `"Yes"`, `"No"`, blank, or a Supabase Storage URL (`https://uuxswydxnbdycdvssnhb.supabase.co/...`). Any row whose value doesn't start with `https://cdn.shopify.com/` is auto-retried on the next scraper run (Supabase Storage URLs are valid for Claude vision but will be replaced with CDN URLs when the product is found in a fresh Shopify fetch)
 - Deduplication key is `(Brand, Product Line, Colorway Name)` — the scraper skips any triple already present (checked against Supabase first, CSV fallback)
 
 **Owala Item ID prefixes:** `owala-fs`, `owala-kidsfs`, `owala-fstumbler`, `owala-fstwist`, `owala-sway`, `owala-kidstumbler`, `owala-smoothsip`
@@ -156,13 +171,14 @@ Chinese marketplace screenshots / URLs
 
 ### Key Files
 
-- `scrapers/official_scraper.py` — multi-brand Shopify JSON API scraper. `BRANDS` list at the top configures each brand and its collections. Supports six variant strategies: `"by_color_option"` (Owala/e.l.f./Gymreapers/Rhone — product has Color+Size options), `"by_product_title"` (Rhode/Summer Fridays — each product IS one shade, name from title after stripping `model_name` prefix), `"by_title_suffix"` (Gymshark/Alphalete/Buff Bunny/Popflex/Alo Yoga — color after last ` - ` in title), `"by_title_prefix"` (NVGTN — color is the title prefix, strip `model_name` from end), `"by_title_pipe"` (Oner Active — color after last ` | ` in title), `"by_title_parens"` (color in last parentheses, e.g. `"Shirt (Black)"` — implemented but no current brand uses it). Stores Shopify CDN URL directly in `screenshot_url` — no image download or local file. Rows with `Screenshot="No"` or blank are retried on next run. Uses `owala.myshopify.com` for Owala (not `owala.com` — geo-blocked) and `rhodeskin.myshopify.com` for Rhode. Each Owala collection entry supports an optional `title_contains` filter. `--discover <url>` checks if any brand is on open Shopify and lists its collections. `detect_variant_strategy(products)` auto-detects the right strategy by peeking at product options and title patterns. `scrape_brand_dynamic(brand_name, shopify_handle)` fetches all collections and scrapes them dynamically — used by `brand_scout.py --auto-scrape`.
+- `scrapers/official_scraper.py` — multi-brand Shopify JSON API scraper. `BRANDS` list at the top configures each brand and its collections. Supports six variant strategies: `"by_color_option"` (Owala/e.l.f./Gymreapers/Rhone — product has Color+Size options), `"by_product_title"` (Rhode/Summer Fridays — each product IS one shade, name from title after stripping `model_name` prefix), `"by_title_suffix"` (Gymshark/Alphalete/Buff Bunny/Popflex/Alo Yoga — color after last ` - ` in title), `"by_title_prefix"` (NVGTN — color is the title prefix, strip `model_name` from end), `"by_title_pipe"` (Oner Active — color after last ` | ` in title), `"by_title_parens"` (color in last parentheses — implemented but no current brand uses it). Writes to CSV + Google Sheets only — does **not** upsert to Supabase for new rows (run `migrate_to_supabase.py` after). Screenshot URL backfills for existing rows ARE pushed directly to Supabase via `update_screenshot_url()`. Retries any row whose `screenshot_url` doesn't start with `https://cdn.shopify.com/`. Uses `owala.myshopify.com` for Owala (not `owala.com` — geo-blocked) and `rhodeskin.myshopify.com` for Rhode. `--discover <url>` checks if any brand is on open Shopify. `scrape_brand_dynamic()` is used by `brand_scout.py --auto-scrape`.
 - `scrapers/official_page_scraper.py` — fallback for brands without a public Shopify API. Uses Playwright + Claude Haiku vision to screenshot official product pages and extract all colorways/shades. Output goes to `Verified_Products.csv` (Trust Level 5). Requires `playwright install chromium`.
 - `scrapers/listing_extractor.py` — Claude Haiku vision extraction. `EXTRACTION_PROMPT` is the core prompt; edit it when extraction quality degrades. Always pass `--platform` — auto-detection is unreliable.
+- `scrapers/comparison_engine.py` — compares extracted listing data against `verified_products`. Matching cascade returns one of five types: `EXACT` → `FUZZY_COLORWAY` (≥75% similarity via `difflib.SequenceMatcher`) → `COLORWAY_NOT_FOUND` → `PRODUCT_LINE_NOT_FOUND` → `BRAND_NOT_FOUND`. Each type carries a `match_context` dict (known brands/lines/colorways) used to populate the field-by-field terminal report. Outputs `risk_level` (low/medium/high/unverifiable), `expected_matchid`, and `mismatch_reasons`. Size comparison converts ml↔oz to avoid false positives. Four modes: `--watch` (polls `inbox/` every 2 s, auto-processes new images, moves to `processed/YYYY-MM-DD/`), `--screenshot <path>` (extract + compare in one shot), `--testing-id <XHS-NNN>` (compare existing Supabase row), `--all` (batch all unmatched rows). Never uses the word "fake" — always "no official match found" or "claim could not be verified."
 - `scrapers/brand_scout.py` — automated brand discovery. Screenshots Chinese marketplace search results (Rednote/Xianyu/Taobao), uses Claude Haiku vision to extract overseas brand names in parallel, scores by mention frequency × platform weight (Rednote 1.5×, Xianyu 1.2×, Taobao 1.0×), probes Shopify for open APIs, outputs `Brand_Candidates.csv` + Google Sheets "Brand_Candidates" tab. Score threshold is 3.0 (≈2 Rednote high-confidence mentions). Key flags: `--use-app` routes Rednote through the macOS Rednote app via AppleScript (avoids browser login walls); `--force` re-takes screenshots even if today's files already exist (default is to reuse cached screenshots and re-run extraction only); `--screenshots-only` skips extraction entirely; `--auto-scrape` automatically calls `scrape_brand_dynamic()` for any newly found open-Shopify brand. `SEARCH_QUERIES` (17 queries across fitness/beauty/streetwear/accessories) and `BRAND_ALIASES` at the top of the file are the main things to tune.
 - `scrapers/sheets_sync.py` — shared Google Sheets utility. `append_rows()` is the only public function; it auto-expands the sheet's row count if needed. Always non-fatal.
-- `scrapers/supabase_sync.py` — shared Supabase utility. Public functions: `load_existing()`, `next_id_num()`, `upsert_product()`, `upsert_listing()`, `upload_image()`, `update_screenshot_url()`. All non-fatal — returns safe defaults if `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are not set. `upload_image()` is legacy — new rows use Shopify CDN URLs and do not upload to Supabase Storage.
-- `scripts/migrate_to_supabase.py` — incremental backfill script. Upserts Verified_Products.csv and Test_Listings.csv to Supabase, skipping rows already present. Safe to re-run. No image migration step — image URLs are Shopify CDN and stored directly in the CSV/DB.
+- `scrapers/supabase_sync.py` — shared Supabase utility. Public functions: `load_existing()`, `load_all_verified()`, `next_id_num()`, `upsert_product()`, `upsert_listing()`, `update_screenshot_url()`, `load_unmatched_listings()`, `update_listing_match()`, `upload_image()`. All non-fatal — returns safe defaults if `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` are not set. `upload_image()` is legacy — new rows use Shopify CDN URLs and do not upload to Supabase Storage.
+- `scripts/migrate_to_supabase.py` — **run this after every scraper run** to bulk-sync new CSV rows to Supabase in batches of 100 (much faster than individual upserts). Skips rows already in Supabase. Does not update existing rows — screenshot URL backfills are handled separately by the scraper.
 
 ### Adding a New Brand
 
@@ -190,7 +206,15 @@ python scrapers/official_page_scraper.py \
 
 ### Screenshot Conventions
 
-Official product images are stored as Shopify CDN URLs directly in the `Screenshot` / `screenshot_url` column — no download, no local file, no Supabase Storage upload. Shopify CDN URLs are stable (content-addressed). Any row where `Screenshot` is `"No"` or blank is automatically retried on the next scraper run. Processed marketplace screenshots (from `listing_extractor.py`) move to `Data-Scrapers/processed/YYYY-MM-DD/` after extraction.
+Official product images target `https://cdn.shopify.com/...` URLs stored directly in `Screenshot` / `screenshot_url` — no download, no local file. Both Shopify CDN and legacy Supabase Storage URLs (`https://uuxswydxnbdycdvssnhb.supabase.co/...`) are valid public URLs accessible by Claude vision. The scraper replaces Supabase Storage URLs with CDN URLs opportunistically on each run. Processed marketplace screenshots (from `listing_extractor.py`) move to `Data-Scrapers/processed/YYYY-MM-DD/` after extraction.
+
+### After Every Scraper Run
+
+```bash
+/opt/anaconda3/bin/python3.12 scripts/migrate_to_supabase.py
+```
+
+Always run this after `official_scraper.py` to push new rows to Supabase. The scraper only writes to CSV and Google Sheets; Supabase sync is a separate step.
 
 ## Important Constraints
 
@@ -198,3 +222,4 @@ Official product images are stored as Shopify CDN URLs directly in the `Screensh
 - **Trust levels** — only Trust Level 4–5 sources go into `Verified_Products`. Never add data from reseller listings, Pinterest, Google Images, or user posts.
 - **owala.com is geo-blocked** from some networks (resolves to Alibaba Cloud IP `47.96.81.233`). The scraper uses `owala.myshopify.com` which bypasses this. If you see SSL timeout errors on owala.com, this is the cause — do not switch back.
 - **Chinese platform scraping** — Rednote, Taobao, and Xianyu have strong anti-bot measures. URL mode works best with a logged-in `--user-data-dir` session. Expect some URLs to fail; the script continues on failure.
+- **Supabase Cloudflare 500 errors** — `next_id_num()` occasionally returns a Cloudflare 1101 error. This is non-fatal; the scraper falls back to CSV-based ID numbering and all upserts still succeed. Ignore these warnings.

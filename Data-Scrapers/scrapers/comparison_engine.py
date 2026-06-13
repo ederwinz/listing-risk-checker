@@ -7,7 +7,8 @@ Supabase verified_products. Reports discrepancies using "no official match found
 / "claim could not be verified" language — never "fake".
 
 Usage:
-  python scrapers/comparison_engine.py --screenshot inbox/photo.jpg
+  python scrapers/comparison_engine.py --watch               # auto-process inbox/ (recommended)
+  python scrapers/comparison_engine.py --screenshot photo.jpg
   python scrapers/comparison_engine.py --testing-id XHS-001
   python scrapers/comparison_engine.py --all
 """
@@ -18,7 +19,10 @@ import csv
 import difflib
 import os
 import re
+import shutil
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -30,8 +34,11 @@ from listing_extractor import extract_from_screenshot, EXTRACTION_PROMPT  # noqa
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 BASE_DIR = Path(__file__).parent.parent
+INBOX_DIR = BASE_DIR / "inbox"
+PROCESSED_DIR = BASE_DIR / "processed"
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
-FUZZY_THRESHOLD = 0.75  # minimum SequenceMatcher ratio for a fuzzy colorway match
+FUZZY_THRESHOLD = 0.75
 
 
 # ── Normalization ──────────────────────────────────────────────────────────────
@@ -77,14 +84,21 @@ def load_reference_db() -> list[dict]:
 
 # ── Matching ───────────────────────────────────────────────────────────────────
 
-def find_match(extracted: dict, reference: list[dict]) -> tuple[dict | None, float, str]:
+def find_match(
+    extracted: dict, reference: list[dict]
+) -> tuple[dict | None, float, str, dict]:
     """
-    Three-tier cascade:
-      EXACT            — brand + product_line + colorway all normalize-equal
-      FUZZY_COLORWAY   — brand + product_line exact; colorway fuzzy ≥ threshold
-      PRODUCT_LINE_ONLY — brand + product_line exact; colorway below threshold
-      NO_MATCH         — brand or product_line not found
-    Returns (row, confidence, match_type).
+    Match cascade with granular failure types.
+
+    Match types:
+      EXACT               — brand + product_line + colorway all normalize-equal
+      FUZZY_COLORWAY      — brand + product_line exact; colorway fuzzy ≥ threshold
+      COLORWAY_NOT_FOUND  — brand + product_line exact; colorway below threshold
+      PRODUCT_LINE_NOT_FOUND — brand found; product_line not matched
+      BRAND_NOT_FOUND     — brand not in reference db
+
+    Returns (row, confidence, match_type, context).
+    context holds database values useful for the report (known brands/lines/colorways).
     """
     brand = extracted.get("claimed_brand") or ""
     product_line = extracted.get("claimed_productline") or ""
@@ -94,26 +108,36 @@ def find_match(extracted: dict, reference: list[dict]) -> tuple[dict | None, flo
     npl = _normalize(product_line)
     nc = _normalize(colorway)
 
+    # ── Brand lookup ────────────────────────────────────────────────────────
     brand_rows = [r for r in reference if _normalize(r.get("brand")) == nb]
     if not brand_rows:
-        return None, 0.0, "NO_MATCH"
+        known_brands = sorted({r["brand"] for r in reference})
+        return None, 0.0, "BRAND_NOT_FOUND", {"known_brands": known_brands}
 
+    brand_count = len(brand_rows)
+
+    # ── Product line lookup ─────────────────────────────────────────────────
     pl_rows = [r for r in brand_rows if npl and _normalize(r.get("product_line")) == npl]
     if not pl_rows:
-        # Try fuzzy product-line match
         pl_rows = [
             r for r in brand_rows
             if npl and _fuzzy(product_line, r.get("product_line")) >= FUZZY_THRESHOLD
         ]
     if not pl_rows:
-        return None, 0.0, "NO_MATCH"
+        known_lines = sorted({r["product_line"] for r in brand_rows})
+        return None, 0.0, "PRODUCT_LINE_NOT_FOUND", {
+            "brand_count": brand_count,
+            "known_product_lines": known_lines,
+        }
 
-    # Tier 1 — exact colorway
+    known_colorways = sorted({r["colorway_name"] for r in pl_rows if r.get("colorway_name")})
+
+    # ── Tier 1 — exact colorway ─────────────────────────────────────────────
     for row in pl_rows:
         if nc and _normalize(row.get("colorway_name")) == nc:
-            return row, 1.0, "EXACT"
+            return row, 1.0, "EXACT", {"brand_count": brand_count}
 
-    # Tier 2 — fuzzy colorway
+    # ── Tier 2 — fuzzy colorway ─────────────────────────────────────────────
     best_row, best_score = None, 0.0
     for row in pl_rows:
         score = _fuzzy(colorway, row.get("colorway_name"))
@@ -121,21 +145,28 @@ def find_match(extracted: dict, reference: list[dict]) -> tuple[dict | None, flo
             best_score, best_row = score, row
 
     if best_score >= FUZZY_THRESHOLD:
-        # Scale confidence from 0.6 at threshold to 0.9 at perfect
         span = 1.0 - FUZZY_THRESHOLD
         confidence = 0.6 + (best_score - FUZZY_THRESHOLD) / span * 0.3
-        return best_row, round(confidence, 2), "FUZZY_COLORWAY"
+        return best_row, round(confidence, 2), "FUZZY_COLORWAY", {
+            "brand_count": brand_count,
+            "best_fuzzy_score": best_score,
+            "closest_colorway": best_row.get("colorway_name", ""),
+            "known_colorways": known_colorways[:10],
+        }
 
-    # Tier 3 — product line only
-    return pl_rows[0], 0.4, "PRODUCT_LINE_ONLY"
+    # ── Tier 3 — product line only (colorway not found) ─────────────────────
+    return pl_rows[0], 0.4, "COLORWAY_NOT_FOUND", {
+        "brand_count": brand_count,
+        "known_colorways": known_colorways[:10],
+    }
 
 
 # ── Field comparison ───────────────────────────────────────────────────────────
 
 _ML_PER_OZ = 29.5735
 
+
 def _to_oz(s: str) -> float | None:
-    """Convert a size string to fluid ounces for cross-unit comparison."""
     m = re.search(r"(\d+(?:\.\d+)?)\s*(ml|l|oz)?", s.lower())
     if not m:
         return None
@@ -145,26 +176,25 @@ def _to_oz(s: str) -> float | None:
         return val / _ML_PER_OZ
     if unit == "l":
         return val * 1000 / _ML_PER_OZ
-    return val  # oz or bare number
+    return val
+
+
+def _close(a: float, b: float) -> bool:
+    return abs(a - b) / max(b, 1) < 0.05
 
 
 def compare_fields(extracted: dict, match_row: dict, match_type: str) -> list[dict]:
-    """Returns list of {field, severity, message} discrepancy dicts."""
     issues: list[dict] = []
 
-    # Colorway
     if match_type == "FUZZY_COLORWAY":
         claimed = extracted.get("claimed_colorway") or ""
         official = match_row.get("colorway_name") or ""
         issues.append({
             "field": "colorway",
             "severity": "medium",
-            "message": (
-                f"Colorway '{claimed}' could not be verified against official records "
-                f"(closest official match: '{official}')"
-            ),
+            "message": f"Colorway '{claimed}' could not be verified (closest official: '{official}')",
         })
-    elif match_type == "PRODUCT_LINE_ONLY":
+    elif match_type == "COLORWAY_NOT_FOUND":
         claimed = extracted.get("claimed_colorway") or "(not specified)"
         issues.append({
             "field": "colorway",
@@ -172,36 +202,25 @@ def compare_fields(extracted: dict, match_row: dict, match_type: str) -> list[di
             "message": f"Colorway '{claimed}' has no official match in this product line",
         })
 
-    # Status — flag if product is discontinued
     official_status = (match_row.get("status") or "").lower()
     if any(w in official_status for w in ("discontinu", "retired", "sold out")):
         issues.append({
             "field": "status",
             "severity": "high",
-            "message": (
-                f"'{match_row.get('colorway_name')}' is marked as discontinued "
-                "in official records"
-            ),
+            "message": f"'{match_row.get('colorway_name')}' is marked as discontinued in official records",
         })
 
-    # Size
     claimed_size = extracted.get("claimed_size") or ""
     sizes_available = match_row.get("sizes_available") or ""
     if claimed_size and sizes_available:
         claimed_num = _to_oz(claimed_size)
         avail_nums = [_to_oz(s) for s in sizes_available.split(",")]
         avail_nums = [n for n in avail_nums if n is not None]
-        # Allow 5% tolerance to absorb ml↔oz rounding (e.g. 945 ml ≈ 32 oz)
-        def _close(a: float, b: float) -> bool:
-            return abs(a - b) / max(b, 1) < 0.05
         if claimed_num is not None and avail_nums and not any(_close(claimed_num, n) for n in avail_nums):
             issues.append({
                 "field": "size",
                 "severity": "medium",
-                "message": (
-                    f"Claimed size '{claimed_size}' is not among officially offered sizes "
-                    f"({sizes_available.strip()})"
-                ),
+                "message": f"Claimed size '{claimed_size}' is not among officially offered sizes ({sizes_available.strip()})",
             })
 
     return issues
@@ -209,13 +228,16 @@ def compare_fields(extracted: dict, match_row: dict, match_type: str) -> list[di
 
 # ── Report generation ──────────────────────────────────────────────────────────
 
+_UNVERIFIABLE_TYPES = {"BRAND_NOT_FOUND", "PRODUCT_LINE_NOT_FOUND"}
+
+
 def _risk_level(match_type: str, issues: list[dict]) -> str:
-    if match_type == "NO_MATCH":
+    if match_type in _UNVERIFIABLE_TYPES:
         return "unverifiable"
     severities = {d["severity"] for d in issues}
     if "high" in severities or len(issues) >= 2:
         return "high"
-    if "medium" in severities or match_type in ("FUZZY_COLORWAY", "PRODUCT_LINE_ONLY"):
+    if "medium" in severities or match_type in ("FUZZY_COLORWAY", "COLORWAY_NOT_FOUND"):
         return "medium"
     return "low"
 
@@ -226,35 +248,12 @@ def generate_report(
     confidence: float,
     match_type: str,
     issues: list[dict],
+    match_context: dict,
 ) -> dict:
     risk = _risk_level(match_type, issues)
-    brand = extracted.get("claimed_brand") or "Unknown brand"
-    product_line = extracted.get("claimed_productline") or ""
-
-    if match_type == "NO_MATCH":
-        label = brand + (f" {product_line}" if product_line else "")
-        summary = (
-            f"No official reference found for {label} in our database. "
-            "This listing could not be verified against official records."
-        )
-        mismatch_reasons = "No official match found"
-    else:
-        official_name = (
-            f"{match_row['brand']} {match_row['product_line']} – {match_row['colorway_name']}"
-        )
-        if not issues:
-            summary = (
-                f"Official reference found: {official_name}. "
-                "All checked fields match official records."
-            )
-        else:
-            reasons_text = "; ".join(d["message"] for d in issues)
-            summary = (
-                f"Official reference found: {official_name}. "
-                f"The following could not be fully verified: {reasons_text}"
-            )
-        mismatch_reasons = "; ".join(d["message"] for d in issues)
-
+    mismatch_reasons = "; ".join(d["message"] for d in issues) if issues else (
+        "No official match found" if match_type in _UNVERIFIABLE_TYPES else ""
+    )
     return {
         "risk_level": risk,
         "expected_matchid": match_row["item_id"] if match_row else None,
@@ -262,8 +261,8 @@ def generate_report(
         "mismatch_reasons": mismatch_reasons,
         "official_screenshot_url": match_row.get("screenshot_url") if match_row else None,
         "official_source_url": match_row.get("source_url") if match_row else None,
-        "human_summary": summary,
         "match_type": match_type,
+        "match_context": match_context,
         "discrepancies": issues,
     }
 
@@ -271,6 +270,13 @@ def generate_report(
 # ── Console output ─────────────────────────────────────────────────────────────
 
 _RISK_ICON = {"low": "✓", "medium": "⚠", "high": "✗", "unverifiable": "?"}
+_W = 62  # report width
+
+
+def _field_line(icon: str, label: str, claimed: str, result: str, detail: str = "") -> str:
+    claimed_col = f'"{claimed}"' if claimed else "(not in listing)"
+    line = f"    {icon}  {label:<14}{claimed_col:<22}→  {result}"
+    return line + (f"\n       {'':<14}{detail}" if detail else "")
 
 
 def print_report(report: dict, extracted: dict):
@@ -278,22 +284,80 @@ def print_report(report: dict, extracted: dict):
     brand = extracted.get("claimed_brand") or "?"
     pl = extracted.get("claimed_productline") or ""
     colorway = extracted.get("claimed_colorway") or "?"
-    print(f"\n{'─'*60}")
-    print(f"  {icon}  Risk: {report['risk_level'].upper()}")
-    print(f"     Listing:  {brand} / {pl} / {colorway}")
+    ctx = report.get("match_context") or {}
+    match_type = report["match_type"]
+
+    print(f"\n{'─' * _W}")
+    listing_str = f"{brand} / {pl} / {colorway}" if pl else f"{brand} / {colorway}"
+    print(f"  {icon}  Risk: {report['risk_level'].upper()}   ·   {listing_str}")
     if report["expected_matchid"]:
-        print(
-            f"     Match:    {report['expected_matchid']}"
-            f"  (confidence {report['expected_matchconfidence']:.0%})"
-        )
-    print(f"\n  {report['human_summary']}")
-    if report["discrepancies"]:
-        print("\n  Discrepancies:")
-        for d in report["discrepancies"]:
-            print(f"    [{d['severity'].upper()}] {d['message']}")
-    if (report.get("official_screenshot_url") or "").startswith("https://"):
-        print(f"\n  Official image: {report['official_screenshot_url']}")
-    print(f"{'─'*60}")
+        print(f"     Match: {report['expected_matchid']}  ({report['expected_matchconfidence']:.0%} confidence)")
+
+    print(f"\n  Field Verification:")
+
+    # ── Brand ──────────────────────────────────────────────────────────────
+    if match_type == "BRAND_NOT_FOUND":
+        known = ", ".join(ctx.get("known_brands", [])[:8])
+        print(_field_line("✗", "Brand", brand, "not in database"))
+        print(f"       {'':14}Known brands: {known}")
+    else:
+        count = ctx.get("brand_count", "")
+        count_str = f"in database ({count} products)" if count else "confirmed"
+        print(_field_line("✓", "Brand", brand, count_str))
+
+    # ── Product Line ───────────────────────────────────────────────────────
+    if match_type == "BRAND_NOT_FOUND":
+        print(_field_line("–", "Product Line", pl, "not checked (brand not found)"))
+    elif match_type == "PRODUCT_LINE_NOT_FOUND":
+        known_lines = ctx.get("known_product_lines", [])
+        print(_field_line("✗", "Product Line", pl, "not recognized"))
+        if known_lines:
+            lines_str = ", ".join(known_lines[:8])
+            print(f"       {'':14}Known lines: {lines_str}")
+    else:
+        print(_field_line("✓", "Product Line", pl, "confirmed"))
+
+    # ── Colorway ───────────────────────────────────────────────────────────
+    colorway_issues = [d for d in report["discrepancies"] if d["field"] == "colorway"]
+    if match_type in _UNVERIFIABLE_TYPES:
+        print(_field_line("–", "Colorway", colorway, "not checked"))
+    elif match_type == "EXACT":
+        print(_field_line("✓", "Colorway", colorway, "exact match"))
+    elif match_type == "FUZZY_COLORWAY":
+        score = ctx.get("best_fuzzy_score", 0)
+        closest = ctx.get("closest_colorway", "")
+        known = ctx.get("known_colorways", [])
+        print(_field_line("⚠", "Colorway", colorway,
+                          f"no exact match (closest: \"{closest}\" at {score:.0%})"))
+        if known:
+            print(f"       {'':14}Known: {', '.join(known[:8])}")
+    elif match_type == "COLORWAY_NOT_FOUND":
+        known = ctx.get("known_colorways", [])
+        print(_field_line("✗", "Colorway", colorway, "not found in this product line"))
+        if known:
+            print(f"       {'':14}Known: {', '.join(known[:8])}")
+
+    # ── Size ───────────────────────────────────────────────────────────────
+    claimed_size = extracted.get("claimed_size") or ""
+    size_issues = [d for d in report["discrepancies"] if d["field"] == "size"]
+    if match_type in _UNVERIFIABLE_TYPES or not report["expected_matchid"]:
+        print(_field_line("–", "Size", claimed_size, "not checked"))
+    elif size_issues:
+        official_sizes = (report.get("match_context") or {})
+        # Pull official sizes from the discrepancy message
+        msg = size_issues[0]["message"]
+        print(_field_line("✗", "Size", claimed_size, msg.split("officially offered sizes")[-1].strip("() ")))
+    elif claimed_size:
+        print(_field_line("✓", "Size", claimed_size, "confirmed"))
+    else:
+        print(_field_line("–", "Size", "", "not in listing"))
+
+    # ── Official image ─────────────────────────────────────────────────────
+    img_url = report.get("official_screenshot_url") or ""
+    if img_url.startswith("https://"):
+        print(f"\n  Official image: {img_url}")
+
+    print(f"{'─' * _W}")
 
 
 # ── Supabase write ─────────────────────────────────────────────────────────────
@@ -310,9 +374,32 @@ def save_result(testing_id: str, report: dict):
 # ── Core pipeline ──────────────────────────────────────────────────────────────
 
 def run_comparison(extracted: dict, reference: list[dict]) -> dict:
-    match_row, confidence, match_type = find_match(extracted, reference)
+    match_row, confidence, match_type, match_context = find_match(extracted, reference)
     issues = compare_fields(extracted, match_row, match_type) if match_row else []
-    return generate_report(extracted, match_row, confidence, match_type, issues)
+    return generate_report(extracted, match_row, confidence, match_type, issues, match_context)
+
+
+def _process_image(image_path: Path, client: anthropic.Anthropic, reference: list[dict],
+                   move_after: bool = False):
+    """Extract, compare, print. Optionally move to processed/."""
+    print(f"\nExtracting from {image_path.name}…")
+    try:
+        extracted = extract_from_screenshot(image_path, client)
+    except Exception as e:
+        print(f"  ERROR: extraction failed — {e}")
+        return
+    print(
+        f"  Extracted: {extracted.get('claimed_brand')} / "
+        f"{extracted.get('claimed_productline')} / "
+        f"{extracted.get('claimed_colorway')}"
+    )
+    report = run_comparison(extracted, reference)
+    print_report(report, extracted)
+
+    if move_after:
+        dest_dir = PROCESSED_DIR / datetime.now().strftime("%Y-%m-%d")
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(image_path), str(dest_dir / image_path.name))
 
 
 def _row_to_extracted(row: dict) -> dict:
@@ -333,16 +420,12 @@ def main():
     parser = argparse.ArgumentParser(
         description="Compare marketplace listings against official reference data"
     )
+    parser.add_argument("--watch", action="store_true",
+                        help="Watch inbox/ and auto-compare new screenshots (Ctrl+C to stop)")
     parser.add_argument("--screenshot", help="Path to a marketplace screenshot image")
-    parser.add_argument(
-        "--testing-id",
-        help="Compare an existing test listing by ID (e.g. XHS-001)",
-    )
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Compare all test_listings rows that don't yet have a match result",
-    )
+    parser.add_argument("--testing-id", help="Compare an existing test listing by ID (e.g. XHS-001)")
+    parser.add_argument("--all", action="store_true",
+                        help="Compare all test_listings rows that don't yet have a match result")
     args = parser.parse_args()
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -359,25 +442,30 @@ def main():
 
     client = anthropic.Anthropic(api_key=api_key)
 
+    # ── Watch mode ───────────────────────────────────────────────────────────
+    if args.watch:
+        INBOX_DIR.mkdir(exist_ok=True)
+        seen = {p.name for p in INBOX_DIR.iterdir() if p.suffix.lower() in IMAGE_EXTS}
+        print(f"\nWatching {INBOX_DIR}  (Ctrl+C to stop)…")
+        try:
+            while True:
+                time.sleep(2)
+                current = {p for p in INBOX_DIR.iterdir() if p.suffix.lower() in IMAGE_EXTS}
+                new_files = sorted(p for p in current if p.name not in seen)
+                for image_path in new_files:
+                    seen.add(image_path.name)
+                    _process_image(image_path, client, reference, move_after=True)
+                seen = {p.name for p in INBOX_DIR.iterdir() if p.suffix.lower() in IMAGE_EXTS}
+        except KeyboardInterrupt:
+            print("\nStopped.")
+
     # ── Screenshot mode ──────────────────────────────────────────────────────
-    if args.screenshot:
+    elif args.screenshot:
         image_path = Path(args.screenshot)
         if not image_path.exists():
             print(f"ERROR: File not found: {image_path}")
             sys.exit(1)
-        print(f"\nExtracting from {image_path.name}…")
-        try:
-            extracted = extract_from_screenshot(image_path, client)
-        except Exception as e:
-            print(f"ERROR: Extraction failed: {e}")
-            sys.exit(1)
-        print(
-            f"  Extracted: {extracted.get('claimed_brand')} / "
-            f"{extracted.get('claimed_productline')} / "
-            f"{extracted.get('claimed_colorway')}"
-        )
-        report = run_comparison(extracted, reference)
-        print_report(report, extracted)
+        _process_image(image_path, client, reference)
 
     # ── Testing-ID mode ──────────────────────────────────────────────────────
     elif args.testing_id:
