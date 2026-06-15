@@ -17,6 +17,7 @@ import argparse
 import anthropic
 import csv
 import difflib
+import functools
 import os
 import re
 import shutil
@@ -39,6 +40,13 @@ PROCESSED_DIR = BASE_DIR / "processed"
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 FUZZY_THRESHOLD = 0.75
+
+
+# ── Aliases ────────────────────────────────────────────────────────────────────
+
+@functools.lru_cache(maxsize=1)
+def _load_aliases() -> dict:
+    return supabase_sync.load_aliases()
 
 
 # ── Normalization ──────────────────────────────────────────────────────────────
@@ -93,8 +101,9 @@ def find_match(
     Match types:
       EXACT               — brand + product_line + colorway all normalize-equal
       FUZZY_COLORWAY      — brand + product_line exact; colorway fuzzy ≥ threshold
+                            (also used for color-tag visual-color matches at 0.5 confidence)
       COLORWAY_NOT_FOUND  — brand + product_line exact; colorway below threshold
-      PRODUCT_LINE_NOT_FOUND — brand found; product_line not matched
+      PRODUCT_LINE_NOT_FOUND — brand found; product_line not matched (even via aliases)
       BRAND_NOT_FOUND     — brand not in reference db
 
     Returns (row, confidence, match_type, context).
@@ -103,10 +112,17 @@ def find_match(
     brand = extracted.get("claimed_brand") or ""
     product_line = extracted.get("claimed_productline") or ""
     colorway = extracted.get("claimed_colorway") or ""
+    main_colors = [
+        c.strip().lower()
+        for c in (extracted.get("main_colors") or "").split(",")
+        if c.strip()
+    ]
 
     nb = _normalize(brand)
     npl = _normalize(product_line)
     nc = _normalize(colorway)
+
+    aliases_data = _load_aliases()
 
     # ── Brand lookup ────────────────────────────────────────────────────────
     brand_rows = [r for r in reference if _normalize(r.get("brand")) == nb]
@@ -123,6 +139,29 @@ def find_match(
             r for r in brand_rows
             if npl and _fuzzy(product_line, r.get("product_line")) >= FUZZY_THRESHOLD
         ]
+
+    # ── Alias fallback for product line ─────────────────────────────────────
+    if not pl_rows:
+        for b_key, b_data in aliases_data.items():
+            if _normalize(b_key) != nb:
+                continue
+            for official_pl, pl_data in b_data.items():
+                for alias in pl_data.get("aliases", []):
+                    if (
+                        _normalize(npl) == _normalize(alias)
+                        or _fuzzy(product_line, alias) >= FUZZY_THRESHOLD
+                    ):
+                        candidate = [
+                            r for r in brand_rows
+                            if _normalize(r.get("product_line")) == _normalize(official_pl)
+                        ]
+                        if candidate:
+                            pl_rows = candidate
+                            break
+                if pl_rows:
+                    break
+            break  # only one brand key matches
+
     if not pl_rows:
         known_lines = sorted({r["product_line"] for r in brand_rows})
         return None, 0.0, "PRODUCT_LINE_NOT_FOUND", {
@@ -154,7 +193,30 @@ def find_match(
             "known_colorways": known_colorways[:10],
         }
 
-    # ── Tier 3 — product line only (colorway not found) ─────────────────────
+    # ── Tier 3 — color-tag visual-color match ───────────────────────────────
+    if main_colors:
+        matched_pl_names = {_normalize(r.get("product_line", "")) for r in pl_rows}
+        for b_key, b_data in aliases_data.items():
+            if _normalize(b_key) != nb:
+                continue
+            for official_pl, pl_data in b_data.items():
+                if _normalize(official_pl) not in matched_pl_names:
+                    continue
+                for cw_name, tags in pl_data.get("colorways", {}).items():
+                    norm_tags = [_normalize(t) for t in tags]
+                    if any(_normalize(mc) in norm_tags for mc in main_colors):
+                        for row in pl_rows:
+                            if _normalize(row.get("colorway_name")) == _normalize(cw_name):
+                                return row, 0.5, "FUZZY_COLORWAY", {
+                                    "brand_count": brand_count,
+                                    "best_fuzzy_score": 0.5,
+                                    "closest_colorway": cw_name,
+                                    "known_colorways": known_colorways[:10],
+                                    "color_tag_match": True,
+                                }
+            break  # only one brand key matches
+
+    # ── Tier 4 — product line only (colorway not found) ─────────────────────
     return pl_rows[0], 0.4, "COLORWAY_NOT_FOUND", {
         "brand_count": brand_count,
         "known_colorways": known_colorways[:10],
@@ -228,12 +290,14 @@ def compare_fields(extracted: dict, match_row: dict, match_type: str) -> list[di
 
 # ── Report generation ──────────────────────────────────────────────────────────
 
-_UNVERIFIABLE_TYPES = {"BRAND_NOT_FOUND", "PRODUCT_LINE_NOT_FOUND"}
+_UNVERIFIABLE_TYPES = {"BRAND_NOT_FOUND"}
 
 
 def _risk_level(match_type: str, issues: list[dict]) -> str:
     if match_type in _UNVERIFIABLE_TYPES:
         return "unverifiable"
+    if match_type == "PRODUCT_LINE_NOT_FOUND":
+        return "high"
     severities = {d["severity"] for d in issues}
     if "high" in severities or len(issues) >= 2:
         return "high"
@@ -252,7 +316,10 @@ def generate_report(
 ) -> dict:
     risk = _risk_level(match_type, issues)
     mismatch_reasons = "; ".join(d["message"] for d in issues) if issues else (
-        "No official match found" if match_type in _UNVERIFIABLE_TYPES else ""
+        "No official match found" if match_type in _UNVERIFIABLE_TYPES else (
+            "Brand confirmed but product line not found in official records"
+            if match_type == "PRODUCT_LINE_NOT_FOUND" else ""
+        )
     )
     return {
         "risk_level": risk,
@@ -310,7 +377,7 @@ def print_report(report: dict, extracted: dict):
         print(_field_line("–", "Product Line", pl, "not checked (brand not found)"))
     elif match_type == "PRODUCT_LINE_NOT_FOUND":
         known_lines = ctx.get("known_product_lines", [])
-        print(_field_line("✗", "Product Line", pl, "not recognized"))
+        print(_field_line("✗", "Product Line", pl, "not found in official records"))
         if known_lines:
             lines_str = ", ".join(known_lines[:8])
             print(f"       {'':14}Known lines: {lines_str}")
@@ -319,7 +386,7 @@ def print_report(report: dict, extracted: dict):
 
     # ── Colorway ───────────────────────────────────────────────────────────
     colorway_issues = [d for d in report["discrepancies"] if d["field"] == "colorway"]
-    if match_type in _UNVERIFIABLE_TYPES:
+    if match_type in _UNVERIFIABLE_TYPES or match_type == "PRODUCT_LINE_NOT_FOUND":
         print(_field_line("–", "Colorway", colorway, "not checked"))
     elif match_type == "EXACT":
         print(_field_line("✓", "Colorway", colorway, "exact match"))
@@ -327,8 +394,12 @@ def print_report(report: dict, extracted: dict):
         score = ctx.get("best_fuzzy_score", 0)
         closest = ctx.get("closest_colorway", "")
         known = ctx.get("known_colorways", [])
-        print(_field_line("⚠", "Colorway", colorway,
-                          f"no exact match (closest: \"{closest}\" at {score:.0%})"))
+        if ctx.get("color_tag_match"):
+            print(_field_line("⚠", "Colorway", colorway,
+                              f"visual color match → \"{closest}\" (via color tag)"))
+        else:
+            print(_field_line("⚠", "Colorway", colorway,
+                              f"no exact match (closest: \"{closest}\" at {score:.0%})"))
         if known:
             print(f"       {'':14}Known: {', '.join(known[:8])}")
     elif match_type == "COLORWAY_NOT_FOUND":
@@ -340,11 +411,9 @@ def print_report(report: dict, extracted: dict):
     # ── Size ───────────────────────────────────────────────────────────────
     claimed_size = extracted.get("claimed_size") or ""
     size_issues = [d for d in report["discrepancies"] if d["field"] == "size"]
-    if match_type in _UNVERIFIABLE_TYPES or not report["expected_matchid"]:
+    if match_type in _UNVERIFIABLE_TYPES or match_type == "PRODUCT_LINE_NOT_FOUND" or not report["expected_matchid"]:
         print(_field_line("–", "Size", claimed_size, "not checked"))
     elif size_issues:
-        official_sizes = (report.get("match_context") or {})
-        # Pull official sizes from the discrepancy message
         msg = size_issues[0]["message"]
         print(_field_line("✗", "Size", claimed_size, msg.split("officially offered sizes")[-1].strip("() ")))
     elif claimed_size:
@@ -371,11 +440,61 @@ def save_result(testing_id: str, report: dict):
     })
 
 
+# ── Alias auto-logging ─────────────────────────────────────────────────────────
+
+_CJK_RE = re.compile(r"[一-鿿]+")
+
+
+def _try_log_alias(extracted: dict, match_row: dict, match_type: str, match_context: dict) -> None:
+    """
+    When a listing matches with solid confidence AND claimed_modelname contains both
+    the official English product-line name and Chinese characters, log the Chinese
+    segments as confirmed aliases to Supabase.
+    """
+    if match_context.get("color_tag_match"):
+        return
+    confidence = match_context.get("best_fuzzy_score", 1.0)
+    if match_type == "FUZZY_COLORWAY" and confidence < 0.75:
+        return
+
+    modelname = extracted.get("claimed_modelname") or ""
+    if not modelname or not _CJK_RE.search(modelname):
+        return
+
+    brand = match_row.get("brand") or ""
+    official_pl = match_row.get("product_line") or ""
+    official_cw = match_row.get("colorway_name") or ""
+    wrote_any = False
+
+    # Product-line aliases — English anchor must appear in modelname
+    if official_pl and _normalize(official_pl).split()[0] in _normalize(modelname):
+        seqs = [s for s in _CJK_RE.findall(modelname) if len(s) >= 2]
+        for seq in seqs:
+            supabase_sync.upsert_product_line_alias(brand, official_pl, seq)
+            print(f"  ✦  alias logged  \"{seq}\" → {official_pl}  ({brand})")
+            wrote_any = True
+
+    # Colorway color-tag aliases — EXACT match only
+    if match_type == "EXACT" and official_cw:
+        cw_anchor = _normalize(official_cw).split()[0]
+        if cw_anchor and cw_anchor in _normalize(modelname):
+            seqs = [s for s in _CJK_RE.findall(modelname) if len(s) >= 2]
+            for seq in seqs:
+                supabase_sync.upsert_colorway_alias(brand, official_pl, official_cw, seq)
+                print(f"  ✦  color tag logged  \"{seq}\" → {official_cw}  ({brand} / {official_pl})")
+                wrote_any = True
+
+    if wrote_any:
+        _load_aliases.cache_clear()
+
+
 # ── Core pipeline ──────────────────────────────────────────────────────────────
 
 def run_comparison(extracted: dict, reference: list[dict]) -> dict:
     match_row, confidence, match_type, match_context = find_match(extracted, reference)
     issues = compare_fields(extracted, match_row, match_type) if match_row else []
+    if match_row:
+        _try_log_alias(extracted, match_row, match_type, match_context)
     return generate_report(extracted, match_row, confidence, match_type, issues, match_context)
 
 
@@ -407,8 +526,10 @@ def _row_to_extracted(row: dict) -> dict:
         "claimed_brand": row.get("claimed_brand"),
         "claimed_productline": row.get("claimed_productline"),
         "claimed_colorway": row.get("claimed_colorway"),
+        "claimed_modelname": row.get("claimed_modelname"),
         "claimed_size": row.get("claimed_size"),
         "claimed_status": row.get("claimed_status"),
+        "main_colors": row.get("main_colors"),
         "platform": row.get("platform"),
         "seller_name": row.get("seller_name"),
     }

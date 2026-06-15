@@ -195,6 +195,90 @@ def load_unmatched_listings() -> list[dict]:
         return []
 
 
+def load_aliases() -> dict:
+    """
+    Returns nested alias dict:
+      {brand: {product_line: {aliases: [...], colorways: {colorway_name: [color_tags]}}}}
+    Returns {} if Supabase not configured or tables don't exist yet.
+    """
+    client = _get_client()
+    if not client:
+        return {}
+    try:
+        pl_resp = client.table("product_line_aliases").select("brand,product_line,alias").execute()
+        cw_resp = client.table("colorway_aliases").select("brand,product_line,colorway_name,color_tag").execute()
+        result: dict = {}
+        for row in (pl_resp.data or []):
+            result.setdefault(row["brand"], {}).setdefault(row["product_line"], {"aliases": [], "colorways": {}})
+            result[row["brand"]][row["product_line"]]["aliases"].append(row["alias"])
+        for row in (cw_resp.data or []):
+            result.setdefault(row["brand"], {}).setdefault(row["product_line"], {"aliases": [], "colorways": {}})
+            result[row["brand"]][row["product_line"]]["colorways"].setdefault(row["colorway_name"], []).append(row["color_tag"])
+        return result
+    except Exception as e:
+        print(f"  [Supabase] load_aliases failed ({e})")
+        return {}
+
+
+def upsert_product_line_alias(brand: str, product_line: str, alias: str) -> None:
+    """Insert a product-line alias. No-ops silently if already exists."""
+    client = _get_client()
+    if not client:
+        return
+    try:
+        client.table("product_line_aliases").upsert(
+            {"brand": brand, "product_line": product_line, "alias": alias},
+            on_conflict="brand,product_line,alias",
+        ).execute()
+    except Exception as e:
+        print(f"  [Supabase] upsert_product_line_alias failed ({e})")
+
+
+def upsert_colorway_alias(brand: str, product_line: str, colorway_name: str, color_tag: str) -> None:
+    """Insert a colorway color-tag. No-ops silently if already exists."""
+    client = _get_client()
+    if not client:
+        return
+    try:
+        client.table("colorway_aliases").upsert(
+            {"brand": brand, "product_line": product_line, "colorway_name": colorway_name, "color_tag": color_tag},
+            on_conflict="brand,product_line,colorway_name,color_tag",
+        ).execute()
+    except Exception as e:
+        print(f"  [Supabase] upsert_colorway_alias failed ({e})")
+
+
+def seed_aliases(path: str) -> None:
+    """
+    One-time seed of product_line_aliases and colorway_aliases tables from aliases.json.
+    Run once after creating the tables:
+      python -c "import sys; sys.path.insert(0,'scrapers'); from dotenv import load_dotenv; load_dotenv('.env'); from supabase_sync import seed_aliases; seed_aliases('aliases.json')"
+    """
+    import json as _json_module
+    from pathlib import Path as _Path
+    client = _get_client()
+    if not client:
+        print("  [Supabase] seed_aliases: client not available")
+        return
+    data = _json_module.loads(_Path(path).read_text(encoding="utf-8"))
+    pl_rows, cw_rows = [], []
+    for brand, lines in data.items():
+        for pl, entry in lines.items():
+            for alias in entry.get("aliases", []):
+                pl_rows.append({"brand": brand, "product_line": pl, "alias": alias})
+            for cw_name, tags in entry.get("colorways", {}).items():
+                for tag in tags:
+                    cw_rows.append({"brand": brand, "product_line": pl, "colorway_name": cw_name, "color_tag": tag})
+    try:
+        if pl_rows:
+            client.table("product_line_aliases").upsert(pl_rows, on_conflict="brand,product_line,alias").execute()
+        if cw_rows:
+            client.table("colorway_aliases").upsert(cw_rows, on_conflict="brand,product_line,colorway_name,color_tag").execute()
+        print(f"  Seeded {len(pl_rows)} product-line aliases, {len(cw_rows)} colorway tags.")
+    except Exception as e:
+        print(f"  [Supabase] seed_aliases failed ({e})")
+
+
 def update_listing_match(testing_id: str, match_data: dict) -> None:
     """Patch comparison result fields onto a test_listings row."""
     client = _get_client()

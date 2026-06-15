@@ -20,17 +20,20 @@ export interface MatchContext {
   known_colorways?: string[];
   best_fuzzy_score?: number;
   closest_colorway?: string;
+  color_tag_match?: boolean;
 }
 
 export interface Extracted {
   claimed_brand: string;
   claimed_productline: string;
   claimed_colorway: string;
+  claimed_modelname: string;
   claimed_size: string;
   claimed_status: string;
   platform: string;
   seller_name: string;
   seller_claims: string;
+  main_colors: string;
 }
 
 export interface Report {
@@ -44,6 +47,8 @@ export interface Report {
   match_context: MatchContext;
   discrepancies: Discrepancy[];
   extracted: Extracted;
+  matched_product_line?: string;
+  matched_colorway_name?: string;
 }
 
 export interface VerifiedProduct {

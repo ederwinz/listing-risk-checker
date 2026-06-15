@@ -4,6 +4,7 @@
  */
 
 import { distance } from "fastest-levenshtein";
+import type { AliasData } from "@/lib/supabase";
 import type {
   VerifiedProduct,
   Report,
@@ -42,10 +43,18 @@ export interface MatchResult {
   matchContext: MatchContext;
 }
 
-export function findMatch(extracted: Extracted, reference: VerifiedProduct[]): MatchResult {
+export function findMatch(
+  extracted: Extracted,
+  reference: VerifiedProduct[],
+  aliasData: AliasData
+): MatchResult {
   const brand = extracted.claimed_brand ?? "";
   const productLine = extracted.claimed_productline ?? "";
   const colorway = extracted.claimed_colorway ?? "";
+  const mainColors = (extracted.main_colors ?? "")
+    .split(",")
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean);
 
   const nb = normalize(brand);
   const npl = normalize(productLine);
@@ -65,6 +74,26 @@ export function findMatch(extracted: Extracted, reference: VerifiedProduct[]): M
   if (plRows.length === 0) {
     plRows = brandRows.filter((r) => npl && fuzzyScore(productLine, r.product_line) >= FUZZY_THRESHOLD);
   }
+
+  // ── Alias fallback for product line ─────────────────────────────────────
+  if (plRows.length === 0) {
+    outer: for (const [bKey, bData] of Object.entries(aliasData)) {
+      if (normalize(bKey) !== nb) continue;
+      for (const [officialPl, plData] of Object.entries(bData)) {
+        for (const alias of plData.aliases ?? []) {
+          if (normalize(npl) === normalize(alias) || fuzzyScore(productLine, alias) >= FUZZY_THRESHOLD) {
+            const candidate = brandRows.filter((r) => normalize(r.product_line) === normalize(officialPl));
+            if (candidate.length > 0) {
+              plRows = candidate;
+              break outer;
+            }
+          }
+        }
+      }
+      break;
+    }
+  }
+
   if (plRows.length === 0) {
     const knownLines = [...new Set(brandRows.map((r) => r.product_line))].sort();
     return {
@@ -111,7 +140,40 @@ export function findMatch(extracted: Extracted, reference: VerifiedProduct[]): M
     };
   }
 
-  // ── Tier 3 — colorway not found ─────────────────────────────────────────
+  // ── Tier 3 — color-tag visual-color match ───────────────────────────────
+  if (mainColors.length > 0) {
+    const matchedPlNames = new Set(plRows.map((r) => normalize(r.product_line)));
+    outer: for (const [bKey, bData] of Object.entries(aliasData)) {
+      if (normalize(bKey) !== nb) continue;
+      for (const [officialPl, plData] of Object.entries(bData)) {
+        if (!matchedPlNames.has(normalize(officialPl))) continue;
+        for (const [cwName, tags] of Object.entries(plData.colorways ?? {})) {
+          const normTags = tags.map((t) => normalize(t));
+          if (mainColors.some((mc) => normTags.includes(normalize(mc)))) {
+            for (const row of plRows) {
+              if (normalize(row.colorway_name) === normalize(cwName)) {
+                return {
+                  row,
+                  confidence: 0.5,
+                  matchType: "FUZZY_COLORWAY",
+                  matchContext: {
+                    brand_count: brandCount,
+                    best_fuzzy_score: 0.5,
+                    closest_colorway: cwName,
+                    known_colorways: knownColorways,
+                    color_tag_match: true,
+                  },
+                };
+              }
+            }
+          }
+        }
+      }
+      break outer;
+    }
+  }
+
+  // ── Tier 4 — colorway not found ─────────────────────────────────────────
   return {
     row: plRows[0],
     confidence: 0.4,
@@ -188,10 +250,11 @@ export function compareFields(
 
 // ── Report generation ────────────────────────────────────────────────────────
 
-const UNVERIFIABLE_TYPES = new Set<MatchType>(["BRAND_NOT_FOUND", "PRODUCT_LINE_NOT_FOUND"]);
+const UNVERIFIABLE_TYPES = new Set<MatchType>(["BRAND_NOT_FOUND"]);
 
 function riskLevel(matchType: MatchType, issues: Discrepancy[]): Report["risk_level"] {
   if (UNVERIFIABLE_TYPES.has(matchType)) return "unverifiable";
+  if (matchType === "PRODUCT_LINE_NOT_FOUND") return "high";
   const severities = new Set(issues.map((d) => d.severity));
   if (severities.has("high") || issues.length >= 2) return "high";
   if (severities.has("medium") || matchType === "FUZZY_COLORWAY" || matchType === "COLORWAY_NOT_FOUND")
@@ -207,22 +270,35 @@ export function generateReport(
   issues: Discrepancy[],
   matchContext: MatchContext
 ): Report {
+  const mismatches = issues.map((d) => d.message).join("; ");
+  const fallback = UNVERIFIABLE_TYPES.has(matchType)
+    ? "No official match found"
+    : matchType === "PRODUCT_LINE_NOT_FOUND"
+    ? "Brand confirmed but product line not found in official records"
+    : "";
+
   return {
     risk_level: riskLevel(matchType, issues),
     match_type: matchType,
     expected_matchid: matchRow?.item_id ?? null,
     expected_matchconfidence: confidence,
-    mismatch_reasons: issues.map((d) => d.message).join("; ") || (UNVERIFIABLE_TYPES.has(matchType) ? "No official match found" : ""),
+    mismatch_reasons: mismatches || fallback,
     official_screenshot_url: matchRow?.screenshot_url ?? null,
     official_source_url: matchRow?.source_url ?? null,
     match_context: matchContext,
     discrepancies: issues,
     extracted,
+    matched_product_line: matchRow?.product_line ?? undefined,
+    matched_colorway_name: matchRow?.colorway_name ?? undefined,
   };
 }
 
-export function runComparison(extracted: Extracted, reference: VerifiedProduct[]): Report {
-  const { row, confidence, matchType, matchContext } = findMatch(extracted, reference);
+export function runComparison(
+  extracted: Extracted,
+  reference: VerifiedProduct[],
+  aliasData: AliasData
+): Report {
+  const { row, confidence, matchType, matchContext } = findMatch(extracted, reference, aliasData);
   const issues = row ? compareFields(extracted, row, matchType) : [];
   return generateReport(extracted, row, confidence, matchType, issues, matchContext);
 }

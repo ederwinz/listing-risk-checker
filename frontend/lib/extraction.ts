@@ -57,11 +57,13 @@ export async function extractFromImage(imageBase64: string, mediaType: string): 
     claimed_brand: raw.claimed_brand ?? "",
     claimed_productline: raw.claimed_productline ?? "",
     claimed_colorway: raw.claimed_colorway ?? "",
+    claimed_modelname: raw.claimed_modelname ?? "",
     claimed_size: raw.claimed_size ?? "",
     claimed_status: raw.claimed_status ?? "unknown",
     platform: raw.platform ?? "Unknown",
     seller_name: raw.seller_name ?? "",
     seller_claims: raw.seller_claims ?? "",
+    main_colors: raw.main_colors ?? "",
   };
 }
 

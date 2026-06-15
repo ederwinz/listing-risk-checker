@@ -1,0 +1,223 @@
+{
+  "Owala": {
+    "FreeSip": {
+      "aliases": ["freesip", "双饮杯", "吸管保温杯", "owala双饮", "欧乐拉双饮", "双饮水杯", "吸管杯"],
+      "colorways": {
+        "Bunny Business": ["pink", "light pink", "粉色", "粉红色", "浅粉"],
+        "Very Peri": ["purple", "lavender", "紫色", "蓝紫", "浅紫", "薰衣草"],
+        "Leak But Make It Fashion": ["black", "black white", "黑色", "黑白", "黑"],
+        "Read My Lips": ["red", "wine red", "红色", "酒红", "深红"],
+        "Camo Lilac": ["lilac", "camo", "purple camo", "迷彩紫", "迷彩"],
+        "Matcha Latte": ["green", "matcha", "sage green", "绿色", "抹茶", "豆绿", "草绿"],
+        "Watercolor": ["blue", "light blue", "蓝色", "浅蓝", "天蓝"],
+        "Pacific Dream": ["teal", "blue green", "蓝绿色", "青色"],
+        "Arctic Blaze": ["white", "white blue", "白色", "白蓝"],
+        "Candy Store": ["yellow", "orange yellow", "黄色", "橙黄"]
+      }
+    },
+    "FreeSip Tumbler": {
+      "aliases": ["tumbler", "保温杯", "tumbler杯", "旋转杯", "fstumbler"]
+    },
+    "Kids FreeSip": {
+      "aliases": ["kids", "儿童款", "儿童水杯", "kid freesip", "kidsfs", "kids freesip"]
+    },
+    "Sway": {
+      "aliases": ["sway", "单饮杯", "单层", "sway杯"]
+    },
+    "SmoothSip": {
+      "aliases": ["smoothsip", "smooth sip", "smoothsip杯"]
+    }
+  },
+  "Rhode": {
+    "Lip Treatment": {
+      "aliases": ["lip treatment", "唇部护理", "唇蜜", "护唇膏", "lip treat", "唇部滋养", "唇膏"],
+      "colorways": {
+        "Pineapple": ["yellow", "黄色", "菠萝色"],
+        "Salted Caramel": ["brown", "caramel", "棕色", "焦糖色", "卡其"],
+        "Strawberry Glaze": ["pink", "red pink", "草莓色", "粉色", "粉红"],
+        "Birthday Cake": ["pink white", "white pink", "蛋糕色", "浅粉白"],
+        "Nude": ["nude", "beige", "裸色", "肤色"]
+      }
+    },
+    "Lip Tint": {
+      "aliases": ["lip tint", "唇彩", "唇釉", "tint", "lip tints"]
+    },
+    "Blush": {
+      "aliases": ["blush", "腮红", "干粉腮红"]
+    },
+    "Barrier Butter": {
+      "aliases": ["barrier butter", "保湿霜", "屏障霜", "butter霜", "屏障乳霜"]
+    },
+    "Glazing Milk": {
+      "aliases": ["glazing milk", "光泽乳液", "glazing", "精华乳", "亮泽乳"]
+    },
+    "Highlight Milk": {
+      "aliases": ["highlight milk", "高光乳液", "高光奶", "提亮乳"]
+    },
+    "Lip Shape": {
+      "aliases": ["lip shape", "唇线笔", "唇形笔"]
+    }
+  },
+  "Gymshark": {
+    "Adapt": {
+      "aliases": ["adapt", "adapt系列", "纹路打底", "adapt leggings"]
+    },
+    "Crest": {
+      "aliases": ["crest", "crest帽衫", "连帽卫衣", "crest hoodie"]
+    },
+    "Elevate": {
+      "aliases": ["elevate", "提臀裤", "elevate leggings"]
+    },
+    "Flex": {
+      "aliases": ["flex", "flex系列", "高腰裤", "flex leggings"]
+    },
+    "Legacy": {
+      "aliases": ["legacy", "legacy系列", "legacy短裤"]
+    },
+    "315": {
+      "aliases": ["315", "315系列", "315 leggings"]
+    },
+    "Gains": {
+      "aliases": ["gains", "gains系列", "t恤"]
+    }
+  },
+  "Alphalete": {
+    "Amplify": {
+      "aliases": ["amplify", "amplify leggings", "amplify打底", "阿尔法打底"]
+    },
+    "Aura": {
+      "aliases": ["aura", "aura leggings", "aura裤"]
+    },
+    "Pump": {
+      "aliases": ["pump", "pump cover", "pump衫"]
+    },
+    "Tenacity": {
+      "aliases": ["tenacity", "tenacity shorts", "tenacity短裤"]
+    },
+    "Zero": {
+      "aliases": ["zero", "zero croptop", "zero bra"]
+    }
+  },
+  "NVGTN": {
+    "Contour": {
+      "aliases": ["contour", "contour leggings", "contour打底", "nvgtn紧身裤", "nvgtn contour"]
+    },
+    "Scrunch": {
+      "aliases": ["scrunch", "scrunch leggings", "褶皱裤"]
+    },
+    "Solid": {
+      "aliases": ["solid", "solid leggings", "纯色裤"]
+    },
+    "Camo": {
+      "aliases": ["camo", "camo leggings", "迷彩裤"]
+    },
+    "Digital": {
+      "aliases": ["digital", "digital camo", "数码迷彩"]
+    }
+  },
+  "e.l.f. Cosmetics": {
+    "Halo Glow": {
+      "aliases": ["halo glow", "光晕", "精华液", "glow液", "halo glow liquid filter"]
+    },
+    "Camo Concealer": {
+      "aliases": ["camo concealer", "迷彩遮瑕", "遮瑕膏", "遮瑕液"]
+    },
+    "Power Grip Primer": {
+      "aliases": ["power grip", "持妆底液", "grip primer", "power grip primer"]
+    },
+    "Foundation": {
+      "aliases": ["foundation", "粉底液", "粉底"]
+    },
+    "Blush": {
+      "aliases": ["blush", "腮红", "elf腮红"]
+    }
+  },
+  "Summer Fridays": {
+    "Lip Butter Balm": {
+      "aliases": ["lip butter", "唇部黄油", "护唇膏", "lbb", "lip butter balm", "黄油唇膏"],
+      "colorways": {
+        "Sweet Mint": ["mint", "green", "薄荷绿", "绿色"],
+        "Vanilla Beige": ["beige", "nude", "米色", "裸色"],
+        "Raspberry Milk": ["pink", "粉色", "莓果色"]
+      }
+    },
+    "Dream Lip Oil": {
+      "aliases": ["dream lip oil", "唇油", "lip oil", "梦境唇油"]
+    },
+    "Flushed": {
+      "aliases": ["flushed", "腮红", "脸颊色"]
+    }
+  },
+  "Alo Yoga": {
+    "Airlift": {
+      "aliases": ["airlift", "air lift", "提臀瑜伽裤", "airlift leggings"]
+    },
+    "Airbrush": {
+      "aliases": ["airbrush", "air brush", "打底裤", "airbrush leggings"]
+    },
+    "Conquer": {
+      "aliases": ["conquer", "conquer bra", "运动bra"]
+    },
+    "Soft Motion": {
+      "aliases": ["soft motion", "柔动", "soft motion leggings"]
+    }
+  },
+  "Buff Bunny": {
+    "Airbrush": {
+      "aliases": ["airbrush", "气刷打底", "bb airbrush", "airbrush leggings"]
+    },
+    "Butter": {
+      "aliases": ["butter", "奶油打底", "butter leggings"]
+    },
+    "Seamless": {
+      "aliases": ["seamless", "无缝", "seamless leggings"]
+    }
+  },
+  "Popflex": {
+    "Pirouette": {
+      "aliases": ["pirouette", "芭蕾裤", "pirouette leggings", "ballerina"]
+    },
+    "Crisscross": {
+      "aliases": ["crisscross", "交叉", "crisscross leggings"]
+    },
+    "Cloud Hoodie": {
+      "aliases": ["cloud hoodie", "云朵帽衫", "cloud"]
+    }
+  },
+  "Oner Active": {
+    "Classic Seamless": {
+      "aliases": ["classic seamless", "经典无缝", "seamless", "oner seamless"]
+    },
+    "Effortless": {
+      "aliases": ["effortless", "effortless系列", "effortless leggings"]
+    },
+    "Soft Motion": {
+      "aliases": ["soft motion", "柔动系列"]
+    },
+    "Accentuate": {
+      "aliases": ["accentuate", "accentuate系列"]
+    }
+  },
+  "Gymreapers": {
+    "Lifting Straps": {
+      "aliases": ["lifting straps", "助力带", "举重带", "拉力带"]
+    },
+    "Knee Sleeves": {
+      "aliases": ["knee sleeves", "护膝", "膝盖套", "护膝套"]
+    },
+    "Lever Belt": {
+      "aliases": ["lever belt", "举重腰带", "腰带"]
+    }
+  },
+  "Rhone": {
+    "Commuter Shirt": {
+      "aliases": ["commuter", "通勤衬衫", "商务衬衫", "commuter shirt"]
+    },
+    "Reign Short": {
+      "aliases": ["reign", "reign short", "运动短裤", "reign shorts"]
+    },
+    "Commuter Pant": {
+      "aliases": ["commuter pant", "通勤裤", "commuter pants"]
+    }
+  }
+}
