@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Report, ResultSlot, RiskLevel } from "@/types/report";
 import { ReportCard } from "./ReportCard";
 import { PlusIcon } from "./icons";
+import { useDict } from "./dict-context";
 
 interface ResultsListProps {
   files: File[];
@@ -11,6 +12,7 @@ interface ResultsListProps {
 }
 
 export function ResultsList({ files, onReset }: ResultsListProps) {
+  const t = useDict();
   const [slots, setSlots] = useState<ResultSlot[]>(() =>
     files.map((file) => ({
       id: `${file.name}-${file.lastModified}`,
@@ -72,15 +74,15 @@ export function ResultsList({ files, onReset }: ResultsListProps) {
         <div className="tally" style={{ marginBottom: 6 }}>
           <div className="t low">
             <div className="n">{tally("low")}</div>
-            <div className="k">Match</div>
+            <div className="k">{t.tallyMatch}</div>
           </div>
           <div className="t medium">
             <div className="n">{tally("medium")}</div>
-            <div className="k">Partial</div>
+            <div className="k">{t.tallyPartial}</div>
           </div>
           <div className="t high">
             <div className="n">{tally("high")}</div>
-            <div className="k">No match</div>
+            <div className="k">{t.tallyNoMatch}</div>
           </div>
         </div>
       )}
@@ -90,7 +92,7 @@ export function ResultsList({ files, onReset }: ResultsListProps) {
       ))}
 
       <button className="btn btn-ghost" style={{ marginTop: 6 }} onClick={onReset}>
-        <PlusIcon /> Check more listings
+        <PlusIcon /> {t.checkMore}
       </button>
     </div>
   );

@@ -3,8 +3,10 @@
 import type { ResultSlot } from "@/types/report";
 import { RiskBadge } from "./RiskBadge";
 import { RiskReport } from "./RiskReport";
+import { useDict } from "./dict-context";
 
 export function ReportCard({ slot }: { slot: ResultSlot }) {
+  const t = useDict();
   const r = slot.report;
   const title = r
     ? [r.extracted.claimed_brand, r.extracted.claimed_productline].filter(Boolean).join(" ") ||
@@ -12,7 +14,7 @@ export function ReportCard({ slot }: { slot: ResultSlot }) {
     : slot.file.name;
   const sub = r
     ? [r.extracted.seller_name, r.extracted.platform].filter(Boolean).join(" · ")
-    : "Listing screenshot";
+    : t.cardFallbackSub;
 
   return (
     <div className="card" style={{ overflow: "hidden" }}>
@@ -27,13 +29,13 @@ export function ReportCard({ slot }: { slot: ResultSlot }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span className="spin" />
                 <span style={{ fontSize: 12.5, color: "var(--muted)" }}>
-                  {slot.status === "pending" ? "Queued…" : "Matching records…"}
+                  {slot.status === "pending" ? t.cardQueued : t.cardMatching}
                 </span>
               </div>
             </>
           ) : slot.status === "error" ? (
             <>
-              <div className="brand">Couldn’t check this listing</div>
+              <div className="brand">{t.cardError}</div>
               <div className="sub" style={{ color: "var(--high)" }}>
                 {slot.error}
               </div>

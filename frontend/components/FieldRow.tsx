@@ -1,4 +1,7 @@
+"use client";
+
 import { CheckIcon, WarnIcon, CrossIcon, DashIcon } from "./icons";
+import { useDict } from "./dict-context";
 
 export type FieldStatus = "ok" | "warn" | "fail" | "skip";
 
@@ -18,13 +21,14 @@ interface FieldRowProps {
 }
 
 export function FieldRow({ status, label, claimed, result, detail }: FieldRowProps) {
+  const t = useDict();
   return (
     <div className="field">
       <span className={`fico ${status}`}>{ICONS[status]}</span>
       <div className="fbody">
         <div className="label">{label}</div>
         <div className="fval">
-          {claimed || <span className="none">not in listing</span>}
+          {claimed || <span className="none">{t.notInListing}</span>}
         </div>
         {result && <div className={`fresult ${status}`}>{result}</div>}
         {detail && <div className="fdetail">{detail}</div>}

@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication Style
+
+The repo owner is **not a coder**. Explain everything in plain, non-technical language:
+- Avoid jargon; when a technical term is unavoidable, define it in everyday words.
+- When proposing or describing a code change, explain **intuitively what it does and why** — the real-world effect, not just the implementation. Use analogies where helpful.
+- Describe errors by what went wrong and what it means for the app, before any technical detail.
+
 ## Project Overview
 
 This is the data pipeline for a **listing risk checker** — an app that helps buyers in China verify whether overseas products sold on platforms like Rednote, Taobao, and Xianyu match official brand references. The output is a mismatch risk score, not a "fake/real" verdict (for legal reasons).
@@ -246,10 +253,14 @@ All three vars are server-only (no `NEXT_PUBLIC_` prefix) — only used inside t
 
 One API route handles the full pipeline: `app/api/analyze/route.ts`
 1. Receives uploaded image (multipart form, field: `"image"`)
-2. In parallel: calls `lib/extraction.ts` (Claude Haiku vision), `lib/supabase.ts → loadAllVerified()`, and `lib/supabase.ts → loadAliases()` — all cached 1 hour via `unstable_cache`
+2. In parallel: calls `lib/extraction.ts` (Claude Haiku vision), `lib/supabase.ts → loadAllVerified()`, and `lib/supabase.ts → loadAliases()`
 3. Calls `lib/comparison.ts → runComparison(extracted, reference, aliasData)` — TypeScript port of `comparison_engine.py`
 4. Calls `lib/alias-logger.ts → tryLogAlias()` fire-and-forget — writes confirmed alias pairs to Supabase if `claimed_modelname` contains both an English anchor and Chinese characters
 5. Returns `Report` JSON
+
+**Caching** — both reference loaders cache for 1 hour, but by different mechanisms:
+- `loadAllVerified()` uses a **plain module-level in-memory cache** (`{ data, at }` + TTL), **not** `unstable_cache`. The reference dataset is ~5MB (10k+ rows) and `unstable_cache` hard-rejects items over 2MB (throws `Failed to set Next.js data cache … items over 2MB`). Do not wrap this in `unstable_cache`.
+- `loadAliases()` is small and stays on `unstable_cache` (`["aliases"]`, `revalidate: 3600`).
 
 `lib/comparison.ts` is the authoritative TypeScript equivalent of `comparison_engine.py`. If you change matching logic in one, mirror it in the other. Key equivalences:
 - `difflib.SequenceMatcher` → `fastest-levenshtein` distance ratio
@@ -261,9 +272,20 @@ One API route handles the full pipeline: `app/api/analyze/route.ts`
 
 **Design system** — `app/globals.css` contains all visual tokens as plain CSS custom properties (no separate Tailwind config). Starts with `@import "tailwindcss"` (Tailwind v4 syntax). All component styles (`.card`, `.verdict`, `.badge`, `.btn`, `.fields`, etc.) are defined there. Dark mode tokens live under `:root[data-theme="dark"]` — the page is light by default; add `data-theme="dark"` to `<html>` to activate. `color-scheme: light` is set on `:root` to prevent macOS dark mode and browser extensions (e.g. Dark Reader) from overriding the light palette.
 
-**Fonts** — three Google fonts loaded via `next/font/google` in `layout.tsx`, exposed as CSS variables: `--font-head` (Source Serif 4), `--font-body` (Hanken Grotesk), `--font-mono` (Geist Mono).
+**Fonts** — loaded via `next/font/google` in `app/[lang]/layout.tsx`, exposed as CSS variables: `--font-head` (Source Serif 4), `--font-body` (Hanken Grotesk), `--font-mono` (Geist Mono). On `/zh`, two CJK fonts are also loaded (`--font-head-cjk` Noto Serif SC, `--font-body-cjk` Noto Sans SC) and their variable classes are added to `<html>` only when `lang === "zh"`. `globals.css` has a `:root[lang="zh"]` rule that lists the Latin face first then falls back to the CJK var, so Chinese glyphs render while Latin brand names (Owala, FreeSip) keep the Latin face.
 
-**Components** — `components/` contains: `BrandMark`, `ConfidenceRing`, `FieldRow`, `ReportCard`, `ResultsList`, `RiskBadge`, `RiskReport`, `UploadButton`, `icons` (SVG icon set).
+**Components** — `components/` contains: `BrandMark`, `ConfidenceRing`, `FieldRow`, `ReportCard`, `ResultsList`, `RiskBadge`, `RiskReport`, `UploadButton`, `icons` (SVG icon set), and `dict-context` (`DictProvider` + `useDict()` hook for i18n strings).
+
+### Internationalization (i18n)
+
+The app is bilingual via **locale-segment routing** — one codebase, two locales (`/en`, `/zh`), English unchanged from the original. Key pieces:
+- `app/dictionaries.ts` — the string table (`en` + `zh`). Interpolating entries are **functions** (e.g. `resultsSub(n)`, `cwFuzzy(name, pct)`, `brandInDb(n)`). Exports `getDict(lang)`, `LANGS`, `DEFAULT_LANG`, and `Dict`/`Lang` types. Brand/product/colorway names are data and are intentionally NOT translated.
+- `app/[lang]/layout.tsx` — **server** root layout (the only one). Handles `generateStaticParams` (en + zh), `generateMetadata`, `<html lang>`, and fonts. `params` is a `Promise` (Next 16) — `await` it.
+- `app/[lang]/page.tsx` — **client** component. Reads `lang` via `use(params)`, calls `getDict(lang)`, and wraps the tree in `<DictProvider>`. Has the EN ⇄ 中文 toggle (plain `<a href={/${otherLang}}>`).
+- `proxy.ts` (frontend root) — Next 16's renamed `middleware`. Redirects locale-less paths (incl. `/`) to `/en`. Matcher excludes `/api`, `/_next`, and files with extensions.
+- **Why the dictionary is resolved on the client, not passed from the server:** functions can't cross the Server→Client boundary in React. So only the `lang` string is passed down; the page calls `getDict(lang)` itself and shares it via `DictProvider`/`useDict()`. Components that call `useDict()` need `"use client"`.
+- **No API changes for i18n:** `/api/analyze` still returns English `mismatch_reasons`, but the UI never renders those sentences — the unverifiable verdict line uses `t.verdictSubUnverifiable` and the size row shows only the extracted size list (data). Everything localizes client-side.
+- When adding user-facing text, add a key to **both** `en` and `zh` in `dictionaries.ts` and read it via `useDict()` — never hardcode a string in a component.
 
 ### User flow
 

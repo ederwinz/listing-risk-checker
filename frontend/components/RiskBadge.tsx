@@ -1,17 +1,14 @@
-import type { RiskLevel } from "@/types/report";
+"use client";
 
-const LABELS: Record<RiskLevel, string> = {
-  low: "Match confirmed",
-  medium: "Partial match",
-  high: "No match found",
-  unverifiable: "Unverifiable",
-};
+import type { RiskLevel } from "@/types/report";
+import { useDict } from "./dict-context";
 
 export function RiskBadge({ level }: { level: RiskLevel }) {
+  const t = useDict();
   return (
     <span className={`badge ${level}`}>
       <span className="dot" />
-      {LABELS[level]}
+      {t.badge[level]}
     </span>
   );
 }

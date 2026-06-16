@@ -35,10 +35,19 @@ async function _loadAllVerified(): Promise<VerifiedProduct[]> {
   return allRows;
 }
 
-// Cache for 1 hour — reference database changes only when scrapers run
-export const loadAllVerified = unstable_cache(_loadAllVerified, ["verified-products"], {
-  revalidate: 3600,
-});
+// Keep an in-memory copy for 1 hour so we don't re-fetch all ~10k rows on every request.
+// We can't use Next's unstable_cache here: it rejects items over 2MB, and this dataset is ~5MB.
+let _verifiedCache: { data: VerifiedProduct[]; at: number } | null = null;
+const VERIFIED_TTL_MS = 3_600_000; // 1 hour
+
+export async function loadAllVerified(): Promise<VerifiedProduct[]> {
+  if (_verifiedCache && Date.now() - _verifiedCache.at < VERIFIED_TTL_MS) {
+    return _verifiedCache.data;
+  }
+  const data = await _loadAllVerified();
+  _verifiedCache = { data, at: Date.now() };
+  return data;
+}
 
 // ── Aliases ───────────────────────────────────────────────────────────────────
 

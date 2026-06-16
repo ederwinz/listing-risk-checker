@@ -1,14 +1,11 @@
+"use client";
+
 import type { Report, RiskLevel } from "@/types/report";
 import { FieldRow, type FieldStatus } from "./FieldRow";
 import { ConfidenceRing } from "./ConfidenceRing";
+import { useDict } from "./dict-context";
 import { CheckIcon, WarnIcon, CrossIcon, DashIcon, ExtIcon } from "./icons";
 
-const VERDICT_TITLE: Record<RiskLevel, string> = {
-  low: "Matches official records",
-  medium: "Partial match — review details",
-  high: "No official match found",
-  unverifiable: "Couldn’t verify this listing",
-};
 const VERDICT_ICON: Record<RiskLevel, React.ReactNode> = {
   low: <CheckIcon />,
   medium: <WarnIcon />,
@@ -17,14 +14,13 @@ const VERDICT_ICON: Record<RiskLevel, React.ReactNode> = {
 };
 
 export function RiskReport({ report }: { report: Report }) {
+  const t = useDict();
   const {
     extracted,
     match_type,
     match_context,
     discrepancies,
     expected_matchid,
-    expected_matchconfidence,
-    mismatch_reasons,
     official_screenshot_url,
     official_source_url,
     risk_level,
@@ -36,13 +32,13 @@ export function RiskReport({ report }: { report: Report }) {
   const brandStatus: FieldStatus = match_type === "BRAND_NOT_FOUND" ? "fail" : "ok";
   const brandResult =
     match_type === "BRAND_NOT_FOUND"
-      ? "Not in database"
+      ? t.brandNotInDb
       : match_context.brand_count
-        ? `In database · ${match_context.brand_count} products`
-        : "Confirmed";
+        ? t.brandInDb(match_context.brand_count)
+        : t.brandConfirmed;
   const brandDetail =
     match_type === "BRAND_NOT_FOUND" && match_context.known_brands
-      ? `Known brands: ${match_context.known_brands.slice(0, 8).join(", ")}`
+      ? t.knownBrands(match_context.known_brands.slice(0, 8).join(", "))
       : undefined;
 
   // ── Product line row ────────────────────────────────────────
@@ -53,13 +49,13 @@ export function RiskReport({ report }: { report: Report }) {
       ? "fail"
       : "ok";
   const plResult = plSkip
-    ? "not provided"
+    ? t.notProvided
     : match_type === "PRODUCT_LINE_NOT_FOUND"
-      ? "Not recognized"
-      : "Recognized";
+      ? t.plNotRecognized
+      : t.plRecognized;
   const plDetail =
     match_type === "PRODUCT_LINE_NOT_FOUND" && match_context.known_product_lines
-      ? `Known lines: ${match_context.known_product_lines.slice(0, 8).join(", ")}`
+      ? t.knownLines(match_context.known_product_lines.slice(0, 8).join(", "))
       : undefined;
 
   // ── Colorway row ────────────────────────────────────────────
@@ -73,18 +69,19 @@ export function RiskReport({ report }: { report: Report }) {
         : "fail";
   const cwResult = cwSkip
     ? match_type === "PRODUCT_LINE_NOT_FOUND"
-      ? "not provided — product line not identified"
-      : "not provided"
+      ? t.cwNotProvidedNoLine
+      : t.notProvided
     : match_type === "EXACT"
-      ? "Exact match"
+      ? t.cwExact
       : match_type === "FUZZY_COLORWAY"
-        ? `No exact match — closest “${match_context.closest_colorway}” at ${Math.round(
-            (match_context.best_fuzzy_score ?? 0) * 100,
-          )}%`
-        : "Not found in this product line";
+        ? t.cwFuzzy(
+            match_context.closest_colorway ?? "",
+            Math.round((match_context.best_fuzzy_score ?? 0) * 100),
+          )
+        : t.cwNotFound;
   const cwDetail =
     !cwSkip && match_type !== "EXACT" && match_context.known_colorways?.length
-      ? `Known colorways: ${match_context.known_colorways.join(", ")}`
+      ? t.knownColorways(match_context.known_colorways.join(", "))
       : undefined;
 
   // ── Size row ────────────────────────────────────────────────
@@ -97,15 +94,15 @@ export function RiskReport({ report }: { report: Report }) {
         ? "ok"
         : "skip";
   const sizeResult = sizeSkip
-    ? "not provided"
+    ? t.notProvided
     : sizeIssue
       ? sizeIssue.message
           .split("officially offered sizes")
           .pop()
           ?.trim()
-          .replace(/^\(|\)$/g, "") ?? "Size mismatch"
+          .replace(/^\(|\)$/g, "") ?? t.sizeMismatch
       : extracted.claimed_size
-        ? "Officially offered"
+        ? t.sizeOfficiallyOffered
         : "";
 
   // ── Verdict summary line ────────────────────────────────────
@@ -114,10 +111,10 @@ export function RiskReport({ report }: { report: Report }) {
   const issues = statuses.filter((s) => s === "fail" || s === "warn").length;
   const verdictSub =
     risk_level === "low"
-      ? "All checked details match the official record."
+      ? t.verdictSubLow
       : risk_level === "unverifiable"
-        ? mismatch_reasons || "Not enough detail to identify this product."
-        : `${issues} of ${checked} details didn’t match.`;
+        ? t.verdictSubUnverifiable
+        : t.verdictSubIssues(issues, checked);
 
   const pct = Math.round((report.overall_score ?? 0) * 100);
 
@@ -128,7 +125,7 @@ export function RiskReport({ report }: { report: Report }) {
         <div className="row">
           <span className="ico">{VERDICT_ICON[risk_level]}</span>
           <div style={{ flex: 1 }}>
-            <div className="vtitle">{VERDICT_TITLE[risk_level]}</div>
+            <div className="vtitle">{t.verdictTitle[risk_level]}</div>
             <div className="vsub">{verdictSub}</div>
           </div>
           <ConfidenceRing pct={pct} level={risk_level} />
@@ -137,20 +134,20 @@ export function RiskReport({ report }: { report: Report }) {
 
       {/* breakdown */}
       <div className="label" style={{ margin: "18px 2px 9px" }}>
-        Detail check
+        {t.detailCheck}
       </div>
       <div className="fields">
-        <FieldRow status={brandStatus} label="Brand" claimed={extracted.claimed_brand} result={brandResult} detail={brandDetail} />
-        <FieldRow status={plStatus} label="Product line" claimed={extracted.claimed_productline} result={plResult} detail={plDetail} />
-        <FieldRow status={cwStatus} label="Colorway" claimed={extracted.claimed_colorway} result={cwResult} detail={cwDetail} />
-        <FieldRow status={sizeStatus} label="Size" claimed={extracted.claimed_size} result={sizeResult} />
+        <FieldRow status={brandStatus} label={t.fieldBrand} claimed={extracted.claimed_brand} result={brandResult} detail={brandDetail} />
+        <FieldRow status={plStatus} label={t.fieldProductLine} claimed={extracted.claimed_productline} result={plResult} detail={plDetail} />
+        <FieldRow status={cwStatus} label={t.fieldColorway} claimed={extracted.claimed_colorway} result={cwResult} detail={cwDetail} />
+        <FieldRow status={sizeStatus} label={t.fieldSize} claimed={extracted.claimed_size} result={sizeResult} />
       </div>
 
       {/* official reference */}
       {official_screenshot_url?.startsWith("https://") ? (
         <>
           <div className="label" style={{ margin: "18px 2px 9px" }}>
-            Official reference
+            {t.officialReference}
           </div>
           <div className="card" style={{ padding: 13 }}>
             <div className="ref">
@@ -158,7 +155,7 @@ export function RiskReport({ report }: { report: Report }) {
               <img className="pic" src={official_screenshot_url} alt="Official product" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13.5 }}>
-                  {expected_matchid ? "Matched record" : "Closest record"}
+                  {expected_matchid ? t.matchedRecord : t.closestRecord}
                 </div>
                 {expected_matchid ? (
                   <div className="mono" style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 3 }}>
@@ -166,7 +163,7 @@ export function RiskReport({ report }: { report: Report }) {
                   </div>
                 ) : (
                   <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 3 }}>
-                    No exact record matched
+                    {t.noExactRecord}
                   </div>
                 )}
                 {official_source_url && (
@@ -177,7 +174,7 @@ export function RiskReport({ report }: { report: Report }) {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    View on official site <ExtIcon />
+                    {t.viewOnOfficial} <ExtIcon />
                   </a>
                 )}
               </div>
@@ -187,8 +184,7 @@ export function RiskReport({ report }: { report: Report }) {
       ) : null}
 
       <p className="note" style={{ margin: "16px 6px 0" }}>
-        This report flags mismatches against official records. It is not a determination of
-        authenticity.
+        {t.reportNote}
       </p>
     </div>
   );

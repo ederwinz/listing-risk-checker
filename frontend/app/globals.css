@@ -15,6 +15,16 @@
   --font-head: 'Source Serif 4', Georgia, serif;
   --font-body: 'Hanken Grotesk', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+
+/* Simplified-Chinese: keep Latin face first (brand names), fall back to Noto SC for CJK glyphs.
+   --font-head-cjk / --font-body-cjk are only present on <html> when lang === "zh". */
+:root[lang="zh"] {
+  --font-head: 'Source Serif 4', var(--font-head-cjk), Georgia, serif;
+  --font-body: 'Hanken Grotesk', var(--font-body-cjk), system-ui, sans-serif;
+}
+
+:root {
 
   /* brand */
   --brand: #12805A;
@@ -104,6 +114,12 @@ body {
   width: 38px; height: 38px; border-radius: 50%; background: var(--surface);
   border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
   color: var(--muted); box-shadow: var(--shadow-sm); cursor: pointer;
+}
+.langtoggle {
+  height: 38px; padding: 0 12px; border-radius: 19px; background: var(--surface);
+  border: 1px solid var(--line); display: inline-flex; align-items: center;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  color: var(--muted); box-shadow: var(--shadow-sm); cursor: pointer; text-decoration: none;
 }
 
 /* ---- type ---- */
