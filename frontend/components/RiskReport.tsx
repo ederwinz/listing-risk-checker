@@ -53,7 +53,7 @@ export function RiskReport({ report }: { report: Report }) {
       ? "fail"
       : "ok";
   const plResult = plSkip
-    ? "Not checked"
+    ? "not provided"
     : match_type === "PRODUCT_LINE_NOT_FOUND"
       ? "Not recognized"
       : "Recognized";
@@ -73,8 +73,8 @@ export function RiskReport({ report }: { report: Report }) {
         : "fail";
   const cwResult = cwSkip
     ? match_type === "PRODUCT_LINE_NOT_FOUND"
-      ? "Not checked — product line not identified"
-      : "Not checked"
+      ? "not provided — product line not identified"
+      : "not provided"
     : match_type === "EXACT"
       ? "Exact match"
       : match_type === "FUZZY_COLORWAY"
@@ -97,7 +97,7 @@ export function RiskReport({ report }: { report: Report }) {
         ? "ok"
         : "skip";
   const sizeResult = sizeSkip
-    ? "Not checked"
+    ? "not provided"
     : sizeIssue
       ? sizeIssue.message
           .split("officially offered sizes")
@@ -119,7 +119,7 @@ export function RiskReport({ report }: { report: Report }) {
         ? mismatch_reasons || "Not enough detail to identify this product."
         : `${issues} of ${checked} details didn’t match.`;
 
-  const pct = Math.round((expected_matchconfidence ?? 0) * 100);
+  const pct = Math.round((report.overall_score ?? 0) * 100);
 
   return (
     <div className="stack" style={{ gap: 0 }}>

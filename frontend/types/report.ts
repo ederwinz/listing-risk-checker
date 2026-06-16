@@ -49,6 +49,7 @@ export interface Report {
   extracted: Extracted;
   matched_product_line?: string;
   matched_colorway_name?: string;
+  overall_score: number;
 }
 
 export interface VerifiedProduct {

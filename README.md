@@ -10,10 +10,12 @@ The product is positioned as an **official-reference mismatch checker** — not 
 
 1. **`official_scraper.py`** — pulls product data (colorways, sizes, prices, images) from brand Shopify stores and builds a verified reference database.
 2. **`listing_extractor.py`** — takes screenshots or URLs of Chinese marketplace listings and uses Claude vision to extract structured product data.
-3. **`comparison_engine.py`** — matches extracted listings against the reference database and outputs a field-by-field risk report (brand / product line / colorway / size).
+3. **`comparison_engine.py`** — matches extracted listings against the reference database and outputs a field-by-field risk report (brand / product line / colorway / size). Match cascade: EXACT → FUZZY_COLORWAY → color-tag → COLORWAY_NOT_FOUND → PRODUCT_LINE_NOT_FOUND → BRAND_NOT_FOUND.
 4. **`brand_scout.py`** — screenshots Chinese marketplace search results, extracts overseas brand mentions, scores by platform weight, and probes for open Shopify APIs.
 
 All tools write to local CSVs, sync to a shared Google Sheet, and sync to Supabase.
+
+Aliases (Chinese ↔ English product/colorway name mappings) are stored in Supabase (`product_line_aliases`, `colorway_aliases` tables) and grow automatically as real listings are matched — both from local batch runs and from users of the web app.
 
 ---
 

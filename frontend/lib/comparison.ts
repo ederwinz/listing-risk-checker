@@ -277,6 +277,16 @@ export function generateReport(
     ? "Brand confirmed but product line not found in official records"
     : "";
 
+  const brandScore = matchType === "BRAND_NOT_FOUND" ? 0 : 1;
+  const plScore = matchType === "BRAND_NOT_FOUND" ? null
+    : matchType === "PRODUCT_LINE_NOT_FOUND" ? 0 : 1;
+  const cwScore = (matchType === "BRAND_NOT_FOUND" || matchType === "PRODUCT_LINE_NOT_FOUND") ? null
+    : confidence;
+  const hasSizeCheck = cwScore !== null && !!extracted.claimed_size && !!matchRow?.sizes_available;
+  const sizeScore = hasSizeCheck ? (issues.some((i) => i.field === "size") ? 0 : 1) : null;
+  const scores = [brandScore, plScore, cwScore, sizeScore].filter((s): s is number => s !== null);
+  const overall_score = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100;
+
   return {
     risk_level: riskLevel(matchType, issues),
     match_type: matchType,
@@ -290,6 +300,7 @@ export function generateReport(
     extracted,
     matched_product_line: matchRow?.product_line ?? undefined,
     matched_colorway_name: matchRow?.colorway_name ?? undefined,
+    overall_score,
   };
 }
 
