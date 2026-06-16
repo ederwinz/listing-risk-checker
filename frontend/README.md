@@ -26,8 +26,11 @@ SUPABASE_SERVICE_KEY=...     # service role key from Supabase dashboard → Proj
 
 1. User taps **Check listings** → selects one or more screenshots from their phone gallery
 2. Each image is sent in parallel to `POST /api/analyze`
-3. The API route extracts product data from the image via Claude Haiku vision, then runs the comparison cascade against the Supabase `verified_products` table
-4. Report cards fill in progressively as each result arrives — no waiting for the full batch
+3. The API route runs three things in parallel: Claude Haiku vision extraction, loading `verified_products` from Supabase (1-hour cache), and loading aliases from Supabase (1-hour cache)
+4. The comparison cascade runs: EXACT → FUZZY_COLORWAY (name similarity ≥ 0.75) → color-tag match (visual color → colorway via aliases) → COLORWAY_NOT_FOUND
+5. An **overall match score** (0–100) is computed as an equal-weight average of brand + product line + colorway + size checks — only fields that were actually checkable are included
+6. Report cards fill in progressively as each result arrives — no waiting for the full batch
+7. Confirmed matches with Chinese model names auto-log new aliases to Supabase (fire-and-forget, non-blocking)
 
 ---
 
@@ -36,23 +39,26 @@ SUPABASE_SERVICE_KEY=...     # service role key from Supabase dashboard → Proj
 ```
 app/api/analyze/route.ts    POST endpoint: image → Report JSON
 lib/extraction.ts           Claude Haiku vision extraction (same prompt as listing_extractor.py)
-lib/comparison.ts           TypeScript port of comparison_engine.py — match cascade + risk scoring
-lib/supabase.ts             Loads all verified_products, cached 1 hour
-types/report.ts             Shared TypeScript types
+lib/comparison.ts           TypeScript port of comparison_engine.py — match cascade + overall_score
+lib/supabase.ts             verified_products + aliases loaded from Supabase, cached 1 hour each
+lib/alias-logger.ts         Fire-and-forget: logs new Chinese aliases on confirmed matches
+types/report.ts             Shared TypeScript types (Report, Extracted, VerifiedProduct, etc.)
 components/ResultsList.tsx  Fires N parallel fetches, renders cards progressively
 components/ReportCard.tsx   Thumbnail + RiskBadge + field-by-field RiskReport
 ```
 
 The comparison logic in `lib/comparison.ts` is the TypeScript equivalent of `Data-Scrapers/scrapers/comparison_engine.py`. If you change matching thresholds or match types in one, mirror the change in the other.
 
+`Report.overall_score` is an equal-weight average of brand (0 or 1), product line (0 or 1), colorway (0–1 from the tier confidence), and size (0 or 1) — null fields are excluded. `expected_matchconfidence` still holds the raw colorway-tier confidence and is used by the alias logger as a quality gate.
+
 ---
 
 ## Commands
 
 ```bash
-npm run dev       # dev server
-npm run build     # production build
-npx tsc --noEmit  # type check only
+npm run dev                          # dev server
+npm run build                        # production build
+./node_modules/.bin/tsc --noEmit    # type check — do NOT use npx tsc (installs wrong package)
 ```
 
 ---
